@@ -74,6 +74,27 @@ async function updateFixedCost(formData: FormData) {
   revalidatePath("/configuracoes");
 }
 
+async function updateGoals(formData: FormData) {
+  "use server";
+
+  const monthlyProfitGoal = parseMoneyInput(
+    formData.get("monthly_profit_goal_rs")
+  );
+  const cashGoal = parseMoneyInput(formData.get("cash_goal_rs"));
+  const purchaseGoal = parseMoneyInput(formData.get("purchase_goal_rs"));
+
+  await supabaseAdmin
+    .from("general_settings")
+    .update({
+      monthly_profit_goal_rs: monthlyProfitGoal,
+      cash_goal_rs: cashGoal,
+      purchase_goal_rs: purchaseGoal,
+    })
+    .eq("id", 1);
+
+  revalidatePath("/configuracoes");
+}
+
 export default async function ConfiguracoesPage() {
   const [
     { data: settings, error: settingsError },
@@ -104,6 +125,30 @@ export default async function ConfiguracoesPage() {
 
   const requiredRevenue =
     marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
+
+  const defaultMonthlyProfitGoal =
+    monthlyProfitGoal > 0
+      ? monthlyProfitGoal.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : "";
+
+  const defaultCashGoal =
+    cashGoal > 0
+      ? cashGoal.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : "";
+
+  const defaultPurchaseGoal =
+    purchaseGoal > 0
+      ? purchaseGoal.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : "";
 
   return (
     <AppShell
@@ -231,22 +276,37 @@ export default async function ConfiguracoesPage() {
         <div className="space-y-4">
           <Panel
             title="Objetivos"
-            subtitle="Também puxados da tabela general_settings"
+            subtitle="Agora esse bloco também salva no banco"
           >
-            <div className="grid gap-4">
-              <ReadonlyField
-                label="Meta de lucro líquido mensal"
-                value={brl(monthlyProfitGoal)}
+            <form action={updateGoals} className="space-y-3">
+              <MoneyInput
+                name="monthly_profit_goal_rs"
+                defaultValue={defaultMonthlyProfitGoal}
+                className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                placeholder="Meta de lucro líquido mensal"
               />
-              <ReadonlyField
-                label="Objetivo de dinheiro em caixa"
-                value={brl(cashGoal)}
+
+              <MoneyInput
+                name="cash_goal_rs"
+                defaultValue={defaultCashGoal}
+                className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                placeholder="Objetivo de dinheiro em caixa"
               />
-              <ReadonlyField
-                label="Objetivo para compras"
-                value={brl(purchaseGoal)}
+
+              <MoneyInput
+                name="purchase_goal_rs"
+                defaultValue={defaultPurchaseGoal}
+                className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                placeholder="Objetivo para compras"
               />
-            </div>
+
+              <button
+                type="submit"
+                className="h-10 rounded-xl bg-[var(--gold)] px-4 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
+              >
+                Salvar objetivos
+              </button>
+            </form>
           </Panel>
 
           <Panel
