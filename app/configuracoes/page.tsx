@@ -132,58 +132,65 @@ export default async function ConfiguracoesPage() {
             subtitle="Edite o valor e clique em salvar em cada linha"
           >
             <div className="space-y-3">
-              {(fixedCosts ?? []).map((item) => (
-                <form
-                  key={item.id}
-                  action={updateFixedCost}
-                  className="rounded-2xl border border-[var(--line)] bg-black/10 p-4"
-                >
-                  <input type="hidden" name="id" value={item.id} />
+              {(fixedCosts ?? []).map((item) => {
+                const defaultMoney =
+                  Number(item.valor_mensal ?? 0) > 0
+                    ? Number(item.valor_mensal).toFixed(2).replace(".", ",")
+                    : "";
 
-                  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                    <div className="min-w-0 md:w-1/3">
-                      <p className="text-sm font-medium text-white">
-                        {item.descricao}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--muted)]">
-                        Ordem: {item.ordem}
-                      </p>
-                    </div>
+                return (
+                  <form
+                    key={item.id}
+                    action={updateFixedCost}
+                    className="rounded-2xl border border-[var(--line)] bg-black/10 p-4"
+                  >
+                    <input type="hidden" name="id" value={item.id} />
 
-                    <div className="grid gap-3 md:w-2/3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                    <div className="grid gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {item.descricao}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Ordem: {item.ordem}
+                        </p>
+                      </div>
+
                       <label className="flex flex-col gap-2">
                         <span className="text-sm text-[var(--muted)]">
                           Valor mensal
                         </span>
                         <input
                           name="valor_mensal"
-                          defaultValue={Number(item.valor_mensal ?? 0)
-                            .toFixed(2)
-                            .replace(".", ",")}
-                          className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                          inputMode="decimal"
+                          placeholder="0,00"
+                          defaultValue={defaultMoney}
+                          className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
                         />
                       </label>
 
-                      <label className="flex h-12 items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/5 px-4 text-sm text-[var(--gold-soft)]">
-                        <input
-                          type="checkbox"
-                          name="ativo"
-                          defaultChecked={item.ativo}
-                          className="h-4 w-4"
-                        />
-                        Ativo
-                      </label>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <label className="flex h-12 items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/5 px-4 text-sm text-[var(--gold-soft)]">
+                          <input
+                            type="checkbox"
+                            name="ativo"
+                            defaultChecked={item.ativo}
+                            className="h-4 w-4"
+                          />
+                          Ativo
+                        </label>
 
-                      <button
-                        type="submit"
-                        className="h-12 rounded-2xl bg-[var(--gold)] px-5 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
-                      >
-                        Salvar
-                      </button>
+                        <button
+                          type="submit"
+                          className="h-12 rounded-2xl bg-[var(--gold)] px-5 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
+                        >
+                          Salvar
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </form>
-              ))}
+                  </form>
+                );
+              })}
 
               {!fixedCosts?.length && (
                 <div className="rounded-2xl border border-[var(--line)] bg-black/10 p-4 text-sm text-[var(--muted)]">
