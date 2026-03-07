@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { AppShell } from "@/components/app-shell";
 import { Panel, StatCard } from "@/components/panel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -37,6 +38,39 @@ function ReadonlyField({
       />
     </label>
   );
+}
+
+function parseMoneyInput(value: FormDataEntryValue | null) {
+  if (!value) return 0;
+
+  const normalized = String(value)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function updateFixedCost(formData: FormData) {
+  "use server";
+
+  const id = String(formData.get("id") ?? "");
+  const valorMensal = parseMoneyInput(formData.get("valor_mensal"));
+  const ativo = formData.get("ativo") === "on";
+
+  if (!id) return;
+
+  await supabaseAdmin
+    .from("fixed_costs")
+    .update({
+      valor_mensal: valorMensal,
+      ativo,
+    })
+    .eq("id", id);
+
+  revalidatePath("/configuracoes");
 }
 
 export default async function ConfiguracoesPage() {
@@ -79,7 +113,7 @@ export default async function ConfiguracoesPage() {
         <div className="space-y-4">
           <Panel
             title="Custos fixos mensais"
-            subtitle="Leitura do banco conectada. No próximo passo vamos salvar alterações."
+            subtitle="Agora já vamos salvar alterações diretamente no banco."
           >
             <div className="grid gap-4 md:grid-cols-2">
               <ReadonlyField
@@ -95,27 +129,60 @@ export default async function ConfiguracoesPage() {
 
           <Panel
             title="Lista de custos fixos"
-            subtitle="Itens puxados da tabela fixed_costs"
+            subtitle="Edite o valor e clique em salvar em cada linha"
           >
             <div className="space-y-3">
               {(fixedCosts ?? []).map((item) => (
-                <div
+                <form
                   key={item.id}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--line)] bg-black/10 px-4 py-4"
+                  action={updateFixedCost}
+                  className="rounded-2xl border border-[var(--line)] bg-black/10 p-4"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">
-                      {item.descricao}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--muted)]">
-                      {item.ativo ? "Ativo" : "Inativo"}
-                    </p>
-                  </div>
+                  <input type="hidden" name="id" value={item.id} />
 
-                  <div className="shrink-0 rounded-xl border border-[var(--line)] bg-white/5 px-3 py-2 text-sm text-[var(--gold-soft)]">
-                    {brl(Number(item.valor_mensal ?? 0))}
+                  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div className="min-w-0 md:w-1/3">
+                      <p className="text-sm font-medium text-white">
+                        {item.descricao}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        Ordem: {item.ordem}
+                      </p>
+                    </div>
+
+                    <div className="grid gap-3 md:w-2/3 md:grid-cols-[1fr_auto_auto] md:items-end">
+                      <label className="flex flex-col gap-2">
+                        <span className="text-sm text-[var(--muted)]">
+                          Valor mensal
+                        </span>
+                        <input
+                          name="valor_mensal"
+                          defaultValue={Number(item.valor_mensal ?? 0)
+                            .toFixed(2)
+                            .replace(".", ",")}
+                          className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                        />
+                      </label>
+
+                      <label className="flex h-12 items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/5 px-4 text-sm text-[var(--gold-soft)]">
+                        <input
+                          type="checkbox"
+                          name="ativo"
+                          defaultChecked={item.ativo}
+                          className="h-4 w-4"
+                        />
+                        Ativo
+                      </label>
+
+                      <button
+                        type="submit"
+                        className="h-12 rounded-2xl bg-[var(--gold)] px-5 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
+                      >
+                        Salvar
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </form>
               ))}
 
               {!fixedCosts?.length && (
