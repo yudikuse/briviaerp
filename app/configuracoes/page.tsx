@@ -148,18 +148,8 @@ export default async function ConfiguracoesPage() {
                 value={pct(Number(settings?.default_card_fee_pct ?? 0))}
               />
               <ReadonlyField
-                label="Comissão plataforma (%)"
-                value={pct(Number(settings?.default_platform_fee_pct ?? 0))}
-              />
-              <ReadonlyField
                 label="Marketing (%)"
                 value={pct(Number(settings?.default_marketing_pct ?? 0))}
-              />
-              <ReadonlyField
-                label="Comissão vendedor (%)"
-                value={pct(
-                  Number(settings?.default_seller_commission_pct ?? 0)
-                )}
               />
               <ReadonlyField
                 label="Outras deduções (%)"
@@ -170,18 +160,8 @@ export default async function ConfiguracoesPage() {
                 value={brl(Number(settings?.default_packaging_rs ?? 0))}
               />
               <ReadonlyField
-                label="Frete subsidiado (R$)"
-                value={brl(
-                  Number(settings?.default_subsidized_shipping_rs ?? 0)
-                )}
-              />
-              <ReadonlyField
                 label="Despesa por peça (R$)"
                 value={brl(Number(settings?.default_piece_expense_rs ?? 0))}
-              />
-              <ReadonlyField
-                label="Custo extra de venda (R$)"
-                value={brl(Number(settings?.default_extra_sale_cost_rs ?? 0))}
               />
             </div>
           </Panel>
