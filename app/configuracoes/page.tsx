@@ -200,7 +200,9 @@ export default async function ConfiguracoesPage() {
                       <MoneyInput
                         name="valor_mensal"
                         defaultValue={defaultMoney}
-                        className="h-10 min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
+                        prefix="R$"
+                        wrapperClassName="min-w-0 flex-1"
+                        className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
                       />
 
                       <label className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[var(--line)] bg-white/5 px-3 text-sm text-[var(--gold-soft)]">
@@ -276,29 +278,47 @@ export default async function ConfiguracoesPage() {
         <div className="space-y-4">
           <Panel
             title="Objetivos"
-            subtitle="Agora esse bloco também salva no banco"
+            subtitle="Valores atuais salvos. Edite e salve novamente quando quiser."
           >
-            <form action={updateGoals} className="space-y-3">
-              <MoneyInput
-                name="monthly_profit_goal_rs"
-                defaultValue={defaultMonthlyProfitGoal}
-                className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                placeholder="Meta de lucro líquido mensal"
-              />
+            <form action={updateGoals} className="space-y-4">
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--muted)]">
+                  Meta de lucro líquido mensal
+                </span>
+                <MoneyInput
+                  name="monthly_profit_goal_rs"
+                  defaultValue={defaultMonthlyProfitGoal}
+                  prefix="R$"
+                  wrapperClassName="w-full"
+                  className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                />
+              </label>
 
-              <MoneyInput
-                name="cash_goal_rs"
-                defaultValue={defaultCashGoal}
-                className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                placeholder="Objetivo de dinheiro em caixa"
-              />
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--muted)]">
+                  Objetivo de dinheiro em caixa
+                </span>
+                <MoneyInput
+                  name="cash_goal_rs"
+                  defaultValue={defaultCashGoal}
+                  prefix="R$"
+                  wrapperClassName="w-full"
+                  className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                />
+              </label>
 
-              <MoneyInput
-                name="purchase_goal_rs"
-                defaultValue={defaultPurchaseGoal}
-                className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                placeholder="Objetivo para compras"
-              />
+              <label className="flex flex-col gap-2">
+                <span className="text-sm text-[var(--muted)]">
+                  Objetivo para compras
+                </span>
+                <MoneyInput
+                  name="purchase_goal_rs"
+                  defaultValue={defaultPurchaseGoal}
+                  prefix="R$"
+                  wrapperClassName="w-full"
+                  className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                />
+              </label>
 
               <button
                 type="submit"
