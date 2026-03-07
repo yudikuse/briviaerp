@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { Panel, StatCard } from "@/components/panel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+export const dynamic = "force-dynamic";
 
 function brl(value: number) {
   return new Intl.NumberFormat("pt-BR", {
