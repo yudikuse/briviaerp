@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { Panel, StatCard } from "@/components/panel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+
 export const dynamic = "force-dynamic";
 
 function brl(value: number) {
@@ -39,17 +40,16 @@ function ReadonlyField({
 }
 
 export default async function ConfiguracoesPage() {
-  const [{ data: settings, error: settingsError }, { data: fixedCosts, error: fixedCostsError }] =
-    await Promise.all([
-      supabaseAdmin
-        .from("general_settings")
-        .select("*")
-        .eq("id", 1)
-        .single(),
-      supabaseAdmin
-        .from("fixed_costs")
-        .select("valor_mensal, ativo"),
-    ]);
+  const [
+    { data: settings, error: settingsError },
+    { data: fixedCosts, error: fixedCostsError },
+  ] = await Promise.all([
+    supabaseAdmin.from("general_settings").select("*").eq("id", 1).single(),
+    supabaseAdmin
+      .from("fixed_costs")
+      .select("id, descricao, valor_mensal, ativo, ordem")
+      .order("ordem", { ascending: true }),
+  ]);
 
   const totalFixedCosts = (fixedCosts ?? [])
     .filter((item) => item.ativo)
@@ -94,6 +94,39 @@ export default async function ConfiguracoesPage() {
           </Panel>
 
           <Panel
+            title="Lista de custos fixos"
+            subtitle="Itens puxados da tabela fixed_costs"
+          >
+            <div className="space-y-3">
+              {(fixedCosts ?? []).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--line)] bg-black/10 px-4 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">
+                      {item.descricao}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {item.ativo ? "Ativo" : "Inativo"}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 rounded-xl border border-[var(--line)] bg-white/5 px-3 py-2 text-sm text-[var(--gold-soft)]">
+                    {brl(Number(item.valor_mensal ?? 0))}
+                  </div>
+                </div>
+              ))}
+
+              {!fixedCosts?.length && (
+                <div className="rounded-2xl border border-[var(--line)] bg-black/10 p-4 text-sm text-[var(--muted)]">
+                  Nenhum custo fixo encontrado.
+                </div>
+              )}
+            </div>
+          </Panel>
+
+          <Panel
             title="Padrões de precificação"
             subtitle="Valores vindos da tabela general_settings"
           >
@@ -124,7 +157,9 @@ export default async function ConfiguracoesPage() {
               />
               <ReadonlyField
                 label="Comissão vendedor (%)"
-                value={pct(Number(settings?.default_seller_commission_pct ?? 0))}
+                value={pct(
+                  Number(settings?.default_seller_commission_pct ?? 0)
+                )}
               />
               <ReadonlyField
                 label="Outras deduções (%)"
@@ -136,7 +171,9 @@ export default async function ConfiguracoesPage() {
               />
               <ReadonlyField
                 label="Frete subsidiado (R$)"
-                value={brl(Number(settings?.default_subsidized_shipping_rs ?? 0))}
+                value={brl(
+                  Number(settings?.default_subsidized_shipping_rs ?? 0)
+                )}
               />
               <ReadonlyField
                 label="Despesa por peça (R$)"
