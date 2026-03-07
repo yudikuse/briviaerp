@@ -1,5 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { AppShell } from "@/components/app-shell";
+import MoneyInput from "@/components/money-input";
 import { Panel, StatCard } from "@/components/panel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -132,7 +133,10 @@ export default async function ConfiguracoesPage() {
               {(fixedCosts ?? []).map((item) => {
                 const defaultMoney =
                   Number(item.valor_mensal ?? 0) > 0
-                    ? Number(item.valor_mensal).toFixed(2).replace(".", ",")
+                    ? Number(item.valor_mensal).toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
                     : "";
 
                 return (
@@ -148,10 +152,8 @@ export default async function ConfiguracoesPage() {
                         {item.descricao}
                       </div>
 
-                      <input
+                      <MoneyInput
                         name="valor_mensal"
-                        inputMode="decimal"
-                        placeholder="0,00"
                         defaultValue={defaultMoney}
                         className="h-10 min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
                       />
@@ -243,18 +245,6 @@ export default async function ConfiguracoesPage() {
               <ReadonlyField
                 label="Objetivo para compras"
                 value={brl(purchaseGoal)}
-              />
-              <ReadonlyField
-                label="Ticket médio alvo"
-                value={brl(Number(settings?.target_avg_ticket_rs ?? 0))}
-              />
-              <ReadonlyField
-                label="Margem mínima desejada (%)"
-                value={pct(Number(settings?.minimum_target_margin_pct ?? 0))}
-              />
-              <ReadonlyField
-                label="Modo de precificação"
-                value={settings?.pricing_mode ?? ""}
               />
             </div>
           </Panel>
