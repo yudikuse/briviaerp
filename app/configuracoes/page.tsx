@@ -43,13 +43,13 @@ function ReadonlyField({
 function parseMoneyInput(value: FormDataEntryValue | null) {
   if (!value) return 0;
 
-  const normalized = String(value)
+  const cleaned = String(value)
     .trim()
     .replace(/\s/g, "")
     .replace(/\./g, "")
     .replace(",", ".");
 
-  const parsed = Number(normalized);
+  const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -127,11 +127,8 @@ export default async function ConfiguracoesPage() {
             </div>
           </Panel>
 
-          <Panel
-            title="Lista de custos fixos"
-            subtitle="Edite o valor e clique em salvar em cada linha"
-          >
-            <div className="space-y-3">
+          <Panel title="Lista de custos fixos">
+            <div className="space-y-2">
               {(fixedCosts ?? []).map((item) => {
                 const defaultMoney =
                   Number(item.valor_mensal ?? 0) > 0
@@ -142,53 +139,39 @@ export default async function ConfiguracoesPage() {
                   <form
                     key={item.id}
                     action={updateFixedCost}
-                    className="rounded-2xl border border-[var(--line)] bg-black/10 p-3"
+                    className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-black/10 px-3 py-3"
                   >
                     <input type="hidden" name="id" value={item.id} />
 
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            {item.descricao}
-                          </p>
-                          <p className="mt-1 text-xs text-[var(--muted)]">
-                            Ordem: {item.ordem}
-                          </p>
-                        </div>
-
-                        <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--line)] bg-white/5 px-3 text-sm text-[var(--gold-soft)]">
-                          <input
-                            type="checkbox"
-                            name="ativo"
-                            defaultChecked={item.ativo}
-                            className="h-4 w-4"
-                          />
-                          Ativo
-                        </label>
+                    <div className="flex min-w-[640px] items-center gap-3">
+                      <div className="w-[140px] shrink-0 text-sm font-medium text-white">
+                        {item.descricao}
                       </div>
 
-                      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                        <label className="flex flex-col gap-2">
-                          <span className="text-sm text-[var(--muted)]">
-                            Valor mensal
-                          </span>
-                          <input
-                            name="valor_mensal"
-                            inputMode="decimal"
-                            placeholder="0,00"
-                            defaultValue={defaultMoney}
-                            className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
-                          />
-                        </label>
+                      <input
+                        name="valor_mensal"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        defaultValue={defaultMoney}
+                        className="h-10 min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
+                      />
 
-                        <button
-                          type="submit"
-                          className="h-10 rounded-xl bg-[var(--gold)] px-5 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
-                        >
-                          Salvar
-                        </button>
-                      </div>
+                      <label className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[var(--line)] bg-white/5 px-3 text-sm text-[var(--gold-soft)]">
+                        <input
+                          type="checkbox"
+                          name="ativo"
+                          defaultChecked={item.ativo}
+                          className="h-4 w-4"
+                        />
+                        Ativo
+                      </label>
+
+                      <button
+                        type="submit"
+                        className="h-10 shrink-0 rounded-xl bg-[var(--gold)] px-4 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
+                      >
+                        Salvar
+                      </button>
                     </div>
                   </form>
                 );
