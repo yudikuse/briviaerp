@@ -6,7 +6,9 @@ type MoneyInputProps = {
   name: string;
   defaultValue?: string;
   className?: string;
+  wrapperClassName?: string;
   placeholder?: string;
+  prefix?: string;
 };
 
 function onlyDigits(value: string) {
@@ -34,25 +36,35 @@ export default function MoneyInput({
   name,
   defaultValue = "",
   className = "",
+  wrapperClassName = "",
   placeholder = "0,00",
+  prefix,
 }: MoneyInputProps) {
   const [digits, setDigits] = useState(() => normalizeInitialValue(defaultValue));
 
   const formattedValue = useMemo(() => formatDigitsToBrl(digits), [digits]);
 
   return (
-    <input
-      name={name}
-      type="text"
-      inputMode="numeric"
-      autoComplete="off"
-      spellCheck={false}
-      placeholder={placeholder}
-      value={formattedValue}
-      onChange={(e) => {
-        setDigits(onlyDigits(e.target.value));
-      }}
-      className={className}
-    />
+    <div className={`relative ${wrapperClassName}`}>
+      {prefix ? (
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[var(--dark-text)]">
+          {prefix}
+        </span>
+      ) : null}
+
+      <input
+        name={name}
+        type="text"
+        inputMode="numeric"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder={placeholder}
+        value={formattedValue}
+        onChange={(e) => {
+          setDigits(onlyDigits(e.target.value));
+        }}
+        className={`${className} ${prefix ? "pl-10" : ""}`}
+      />
+    </div>
   );
 }
