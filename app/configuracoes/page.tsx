@@ -142,35 +142,22 @@ export default async function ConfiguracoesPage() {
                   <form
                     key={item.id}
                     action={updateFixedCost}
-                    className="rounded-2xl border border-[var(--line)] bg-black/10 p-4"
+                    className="rounded-2xl border border-[var(--line)] bg-black/10 p-3"
                   >
                     <input type="hidden" name="id" value={item.id} />
 
-                    <div className="grid gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-white">
-                          {item.descricao}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          Ordem: {item.ordem}
-                        </p>
-                      </div>
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-white">
+                            {item.descricao}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--muted)]">
+                            Ordem: {item.ordem}
+                          </p>
+                        </div>
 
-                      <label className="flex flex-col gap-2">
-                        <span className="text-sm text-[var(--muted)]">
-                          Valor mensal
-                        </span>
-                        <input
-                          name="valor_mensal"
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          defaultValue={defaultMoney}
-                          className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                        />
-                      </label>
-
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <label className="flex h-12 items-center gap-2 rounded-2xl border border-[var(--line)] bg-white/5 px-4 text-sm text-[var(--gold-soft)]">
+                        <label className="flex h-10 items-center gap-2 rounded-xl border border-[var(--line)] bg-white/5 px-3 text-sm text-[var(--gold-soft)]">
                           <input
                             type="checkbox"
                             name="ativo"
@@ -179,10 +166,25 @@ export default async function ConfiguracoesPage() {
                           />
                           Ativo
                         </label>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                        <label className="flex flex-col gap-2">
+                          <span className="text-sm text-[var(--muted)]">
+                            Valor mensal
+                          </span>
+                          <input
+                            name="valor_mensal"
+                            inputMode="decimal"
+                            placeholder="0,00"
+                            defaultValue={defaultMoney}
+                            className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
+                          />
+                        </label>
 
                         <button
                           type="submit"
-                          className="h-12 rounded-2xl bg-[var(--gold)] px-5 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
+                          className="h-10 rounded-xl bg-[var(--gold)] px-5 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
                         >
                           Salvar
                         </button>
