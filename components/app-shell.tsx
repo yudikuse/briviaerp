@@ -2,126 +2,221 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 
 type AppShellProps = {
   title: string;
-  subtitle: string;
-  children: React.ReactNode;
+  subtitle?: string;
+  children: ReactNode;
 };
 
-const navItems = [
-  { href: "/", label: "Dashboard", short: "Início" },
-  { href: "/compras", label: "Compras", short: "Compras" },
-  { href: "/configuracoes", label: "Configurações", short: "Config" },
-  { href: "/vendas", label: "Vendas", short: "Vendas" },
-  { href: "/relatorios", label: "Relatórios", short: "Relat." },
-];
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ReactNode;
+};
 
-function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname.startsWith(href);
+function IconHome() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20h14V9.5" />
+    </svg>
+  );
+}
+
+function IconBox() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3 4 7l8 4 8-4-8-4Z" />
+      <path d="M4 7v10l8 4 8-4V7" />
+      <path d="M12 11v10" />
+    </svg>
+  );
+}
+
+function IconSettings() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 8.5A3.5 3.5 0 1 0 12 15.5A3.5 3.5 0 1 0 12 8.5z" />
+      <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z" />
+    </svg>
+  );
+}
+
+function IconCart() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="9" cy="20" r="1" />
+      <circle cx="18" cy="20" r="1" />
+      <path d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h9.9a1 1 0 0 0 1-.8L21 7H7" />
+    </svg>
+  );
+}
+
+function IconChart() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 19V5" />
+      <path d="M10 19V10" />
+      <path d="M16 19V7" />
+      <path d="M22 19V13" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M15 17H9" />
+      <path d="M18 17V11a6 6 0 1 0-12 0v6l-2 2h16l-2-2Z" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4" />
+      <path d="M8 3v4" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
+
+function BrandMark() {
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-sm font-semibold text-[#0b0b0c]">
+      BM
+    </div>
+  );
+}
+
+function SidebarItem({
+  item,
+  active,
+}: {
+  item: NavItem;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={item.href}
+      className={[
+        "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+        active
+          ? "bg-white text-[#111827]"
+          : "text-white/70 hover:bg-white/8 hover:text-white",
+      ].join(" ")}
+    >
+      <span className={active ? "text-[#ff6a2b]" : "text-white/70"}>{item.icon}</span>
+      <span>{item.label}</span>
+    </Link>
+  );
 }
 
 export function AppShell({ title, subtitle, children }: AppShellProps) {
   const pathname = usePathname();
 
+  const navItems: NavItem[] = [
+    { href: "/", label: "Dashboard", icon: <IconHome /> },
+    { href: "/compras", label: "Compras", icon: <IconCart /> },
+    { href: "/configuracoes", label: "Configurações", icon: <IconSettings /> },
+    { href: "/vendas", label: "Vendas", icon: <IconBox /> },
+    { href: "/relatorios", label: "Relatórios", icon: <IconChart /> },
+  ];
+
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto flex min-h-screen max-w-7xl">
-        <aside className="hidden w-72 shrink-0 border-r border-[var(--line)] bg-black/10 p-6 lg:flex lg:flex-col">
-          <div className="rounded-[28px] border border-[var(--line)] bg-white/5 p-6 shadow-2xl shadow-black/10">
-            <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[var(--line)] bg-[#2d2826] text-[22px] font-semibold text-[var(--gold-soft)]">
-                BM
-              </div>
-
-              <div>
-                <p className="brand-font text-2xl text-[var(--gold-soft)]">
-                  BRIVIA
-                </p>
-                <p className="text-xs uppercase tracking-[0.45em] text-[var(--muted)]">
-                  Modas
-                </p>
-              </div>
+    <div className="min-h-screen bg-[#eef1f5] p-4 md:p-6">
+      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1500px] gap-5">
+        <aside className="hidden w-[260px] shrink-0 rounded-[28px] bg-[#0a0a0b] p-5 text-white shadow-[0_20px_50px_rgba(0,0,0,0.18)] lg:flex lg:flex-col">
+          <div className="flex items-center gap-3 border-b border-white/10 pb-5">
+            <BrandMark />
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">
+                Brivia
+              </p>
+              <p className="text-lg font-semibold tracking-[0.12em]">Modas</p>
             </div>
-
-            <p className="mt-5 text-sm leading-6 text-[var(--muted)]">
-              ERP simples, elegante e direto ao ponto para compras, vendas,
-              metas e resultado operacional.
-            </p>
           </div>
 
-          <nav className="mt-8 flex flex-1 flex-col gap-2">
-            {navItems.map((item) => {
-              const active = isActive(pathname, item.href);
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-2xl border px-4 py-3 text-sm transition ${
-                    active
-                      ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold-soft)]"
-                      : "border-transparent bg-white/5 text-[var(--text)] hover:border-[var(--line)] hover:bg-white/8"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+          <nav className="mt-5 space-y-2">
+            {navItems.map((item) => (
+              <SidebarItem
+                key={item.href}
+                item={item}
+                active={pathname === item.href}
+              />
+            ))}
           </nav>
 
-          <div className="rounded-2xl border border-[var(--line)] bg-white/5 p-4 text-sm text-[var(--muted)]">
-            Passo 1 concluído = casca visual pronta.
-            <br />
-            Passo 2 = Supabase + tabelas + dados reais.
+          <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+            <p className="text-sm font-medium text-white">Brivia Modas ERP</p>
+            <p className="mt-1 text-xs leading-5 text-white/55">
+              Painel clean para compras, vendas, metas e indicadores.
+            </p>
           </div>
         </aside>
 
-        <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-[var(--line)] bg-[#332e2b]/92 px-4 py-4 backdrop-blur lg:px-8">
-            <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-[var(--gold-soft)]">
-                  Brivia Modas ERP
-                </p>
-                <h1 className="mt-1 text-2xl font-semibold text-white">{title}</h1>
-                <p className="mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
+        <main className="min-w-0 flex-1 rounded-[32px] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+          <header className="flex flex-col gap-4 border-b border-[#edf0f4] px-5 py-4 lg:px-8">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="hidden h-11 w-11 items-center justify-center rounded-2xl bg-[#f4f6f8] text-[#111827] lg:flex">
+                  <SearchIcon />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="truncate text-[30px] font-semibold tracking-[-0.04em] text-[#111827]">
+                    {title}
+                  </h1>
+                  {subtitle ? (
+                    <p className="mt-1 text-sm text-[#6b7280]">{subtitle}</p>
+                  ) : null}
+                </div>
               </div>
 
-              <div className="rounded-full border border-[var(--line)] bg-white/5 px-4 py-2 text-sm text-[var(--gold-soft)]">
-                V1 • Base visual
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex h-12 min-w-[260px] items-center gap-3 rounded-2xl border border-[#eceff3] bg-[#fafbfc] px-4 text-[#9aa3af]">
+                  <SearchIcon />
+                  <span className="text-sm">Buscar</span>
+                </div>
+
+                <div className="flex h-12 items-center gap-2 rounded-2xl border border-[#eceff3] bg-[#fafbfc] px-4 text-sm text-[#4b5563]">
+                  <CalendarIcon />
+                  <span>Configurações</span>
+                </div>
+
+                <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#eceff3] bg-[#fafbfc] text-[#6b7280]">
+                  <BellIcon />
+                </button>
+
+                <div className="flex h-12 items-center gap-3 rounded-2xl border border-[#eceff3] bg-[#fafbfc] px-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ff6a2b] text-sm font-semibold text-white">
+                    B
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-sm font-medium text-[#111827]">Brivia Modas</p>
+                  </div>
+                </div>
               </div>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-28 lg:px-8 lg:py-8 lg:pb-8">
-            {children}
-          </main>
-
-          <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--line)] bg-[#2d2826]/97 px-2 py-2 backdrop-blur lg:hidden">
-            <div className="mx-auto grid max-w-2xl grid-cols-5 gap-2">
-              {navItems.map((item) => {
-                const active = isActive(pathname, item.href);
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`rounded-2xl px-2 py-3 text-center text-[11px] transition ${
-                      active
-                        ? "bg-[var(--gold)]/12 text-[var(--gold-soft)]"
-                        : "bg-white/5 text-[var(--muted)]"
-                    }`}
-                  >
-                    {item.short}
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
-        </div>
+          <div className="px-5 py-5 lg:px-8 lg:py-6">{children}</div>
+        </main>
       </div>
     </div>
   );
 }
+
+export default AppShell;
