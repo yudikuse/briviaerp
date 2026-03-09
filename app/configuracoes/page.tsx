@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import { revalidatePath } from "next/cache";
 import { AppShell } from "@/components/app-shell";
+import DecimalInput from "@/components/decimal-input";
 import MoneyInput from "@/components/money-input";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -123,30 +125,24 @@ async function updatePricing(formData: FormData) {
   revalidatePath("/configuracoes");
 }
 
-function Section({
+function Card({
   title,
   children,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <section className="rounded-[28px] border border-[#e9dfd2] bg-white p-5 shadow-[0_10px_30px_rgba(51,46,43,0.06)]">
-      <h2 className="text-lg font-semibold text-[#2f2a26]">{title}</h2>
+    <section className="rounded-[28px] border border-[#e8ddd2] bg-white p-5 shadow-[0_8px_24px_rgba(35,28,22,0.06)]">
+      <h2 className="text-lg font-semibold tracking-[-0.02em] text-[#2f2a26]">
+        {title}
+      </h2>
       <div className="mt-4">{children}</div>
     </section>
   );
 }
 
-function Label({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <span className="text-sm font-medium text-[#6c6258]">{children}</span>;
-}
-
-function MetricCard({
+function Metric({
   label,
   value,
   hint,
@@ -156,16 +152,16 @@ function MetricCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-[22px] border border-[#ece3d9] bg-[#fcfaf7] p-4">
+    <div className="rounded-[22px] border border-[#ebe1d7] bg-[#fcfaf7] p-4">
       <p className="text-sm text-[#7a7067]">{label}</p>
       <p className="mt-2 text-2xl font-semibold text-[#2f2a26]">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-[#9a8f84]">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-[#9d9184]">{hint}</p> : null}
     </div>
   );
 }
 
 const inputClass =
-  "h-12 w-full rounded-2xl border border-[#e7ddd1] bg-[#fbf8f4] px-4 text-sm text-[#2f2a26] outline-none placeholder:text-[#b2a79b] focus:border-[#d8c1a0]";
+  "h-12 w-full rounded-2xl border border-[#e6dbcf] bg-[#fbf8f4] px-4 text-sm text-[#2f2a26] outline-none placeholder:text-[#b4a89b] focus:border-[#d6c2a2]";
 
 export default async function ConfiguracoesPage() {
   const [
@@ -200,20 +196,20 @@ export default async function ConfiguracoesPage() {
 
   return (
     <AppShell title="Configurações gerais" subtitle="">
-      <div className="rounded-[34px] border border-[#d8cdbf] bg-[#f5f1ea] p-4 md:p-6">
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+      <div className="rounded-[34px] border border-[#d9cec3] bg-[#f6f2eb] p-4 md:p-6">
+        <div className="grid gap-4 xl:grid-cols-[1.45fr_0.85fr]">
           <div className="space-y-4">
-            <Section title="Custos fixos">
+            <Card title="Custos fixos">
               <div className="space-y-2">
                 {(fixedCosts ?? []).map((item) => (
                   <form
                     key={item.id}
                     action={updateFixedCost}
-                    className="rounded-[22px] border border-[#ece3d9] bg-[#fcfaf7] p-3"
+                    className="rounded-[22px] border border-[#ebe1d7] bg-[#fcfaf7] p-3"
                   >
                     <input type="hidden" name="id" value={item.id} />
 
-                    <div className="grid gap-3 lg:grid-cols-[150px_minmax(0,1fr)_110px_96px] lg:items-center">
+                    <div className="grid gap-3 xl:grid-cols-[160px_minmax(0,1fr)_110px_96px] xl:items-center">
                       <div className="text-sm font-medium text-[#2f2a26]">
                         {item.descricao}
                       </div>
@@ -226,7 +222,7 @@ export default async function ConfiguracoesPage() {
                         className={inputClass}
                       />
 
-                      <label className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#e7ddd1] bg-white px-3 text-sm text-[#5f554b]">
+                      <label className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#e6dbcf] bg-white px-3 text-sm text-[#5f554b]">
                         <input
                           type="checkbox"
                           name="ativo"
@@ -247,82 +243,156 @@ export default async function ConfiguracoesPage() {
                 ))}
 
                 {!fixedCosts?.length && (
-                  <div className="rounded-[22px] border border-[#ece3d9] bg-[#fcfaf7] p-4 text-sm text-[#7a7067]">
+                  <div className="rounded-[22px] border border-[#ebe1d7] bg-[#fcfaf7] p-4 text-sm text-[#7a7067]">
                     Nenhum custo fixo encontrado.
                   </div>
                 )}
               </div>
-            </Section>
+            </Card>
 
-            <Section title="Padrões de precificação">
-              <form action={updatePricing} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card title="Objetivos">
+                <form action={updateGoals} className="space-y-4">
                   <label className="flex flex-col gap-2">
-                    <Label>Markup (x)</Label>
-                    <input
-                      name="default_markup_x"
-                      defaultValue={decimalDefault(settings?.default_markup_x)}
-                      inputMode="decimal"
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Meta de lucro
+                    </span>
+                    <MoneyInput
+                      name="monthly_profit_goal_rs"
+                      defaultValue={moneyDefault(monthlyProfitGoal)}
+                      prefix="R$"
+                      wrapperClassName="w-full"
                       className={inputClass}
                     />
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Margem alvo (%)</Label>
-                    <input
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Caixa
+                    </span>
+                    <MoneyInput
+                      name="cash_goal_rs"
+                      defaultValue={moneyDefault(cashGoal)}
+                      prefix="R$"
+                      wrapperClassName="w-full"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Compras
+                    </span>
+                    <MoneyInput
+                      name="purchase_goal_rs"
+                      defaultValue={moneyDefault(purchaseGoal)}
+                      prefix="R$"
+                      wrapperClassName="w-full"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="h-12 rounded-2xl bg-[#dfc16c] px-5 text-sm font-semibold text-[#2f2a26] transition hover:opacity-90"
+                    >
+                      Salvar objetivos
+                    </button>
+                  </div>
+                </form>
+              </Card>
+
+              <Card title="Indicadores">
+                <div className="grid gap-3">
+                  <Metric label="Custos fixos" value={brl(totalFixedCosts)} />
+                  <Metric label="Meta operacional" value={brl(operationalGoal)} />
+                  <Metric
+                    label="Faturamento necessário"
+                    value={brl(requiredRevenue)}
+                    hint={marginBase > 0 ? `Base ${pct(marginBase)}` : "Defina a margem alvo"}
+                  />
+                </div>
+              </Card>
+            </div>
+
+            <Card title="Padrões de precificação">
+              <form action={updatePricing} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Markup (x)
+                    </span>
+                    <DecimalInput
+                      name="default_markup_x"
+                      defaultValue={decimalDefault(settings?.default_markup_x)}
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Margem alvo (%)
+                    </span>
+                    <DecimalInput
                       name="default_target_margin_pct"
                       defaultValue={decimalDefault(
                         settings?.default_target_margin_pct
                       )}
-                      inputMode="decimal"
                       className={inputClass}
                     />
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Impostos (%)</Label>
-                    <input
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Impostos (%)
+                    </span>
+                    <DecimalInput
                       name="default_taxes_pct"
                       defaultValue={decimalDefault(settings?.default_taxes_pct)}
-                      inputMode="decimal"
                       className={inputClass}
                     />
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Taxa cartão (%)</Label>
-                    <input
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Taxa cartão (%)
+                    </span>
+                    <DecimalInput
                       name="default_card_fee_pct"
                       defaultValue={decimalDefault(settings?.default_card_fee_pct)}
-                      inputMode="decimal"
                       className={inputClass}
                     />
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Marketing (%)</Label>
-                    <input
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Marketing (%)
+                    </span>
+                    <DecimalInput
                       name="default_marketing_pct"
                       defaultValue={decimalDefault(settings?.default_marketing_pct)}
-                      inputMode="decimal"
                       className={inputClass}
                     />
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Outras deduções (%)</Label>
-                    <input
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Outras deduções (%)
+                    </span>
+                    <DecimalInput
                       name="default_other_deductions_pct"
                       defaultValue={decimalDefault(
                         settings?.default_other_deductions_pct
                       )}
-                      inputMode="decimal"
                       className={inputClass}
                     />
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Embalagem</Label>
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Embalagem
+                    </span>
                     <MoneyInput
                       name="default_packaging_rs"
                       defaultValue={moneyDefault(settings?.default_packaging_rs)}
@@ -333,7 +403,9 @@ export default async function ConfiguracoesPage() {
                   </label>
 
                   <label className="flex flex-col gap-2">
-                    <Label>Despesa por peça</Label>
+                    <span className="text-sm font-medium text-[#6e645a]">
+                      Despesa por peça
+                    </span>
                     <MoneyInput
                       name="default_piece_expense_rs"
                       defaultValue={moneyDefault(
@@ -355,83 +427,17 @@ export default async function ConfiguracoesPage() {
                   </button>
                 </div>
               </form>
-            </Section>
+            </Card>
           </div>
 
-          <div className="space-y-4">
-            <Section title="Objetivos">
-              <form action={updateGoals} className="space-y-4">
-                <label className="flex flex-col gap-2">
-                  <Label>Meta de lucro</Label>
-                  <MoneyInput
-                    name="monthly_profit_goal_rs"
-                    defaultValue={moneyDefault(monthlyProfitGoal)}
-                    prefix="R$"
-                    wrapperClassName="w-full"
-                    className={inputClass}
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <Label>Caixa</Label>
-                  <MoneyInput
-                    name="cash_goal_rs"
-                    defaultValue={moneyDefault(cashGoal)}
-                    prefix="R$"
-                    wrapperClassName="w-full"
-                    className={inputClass}
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <Label>Compras</Label>
-                  <MoneyInput
-                    name="purchase_goal_rs"
-                    defaultValue={moneyDefault(purchaseGoal)}
-                    prefix="R$"
-                    wrapperClassName="w-full"
-                    className={inputClass}
-                  />
-                </label>
-
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="h-12 rounded-2xl bg-[#dfc16c] px-5 text-sm font-semibold text-[#2f2a26] transition hover:opacity-90"
-                  >
-                    Salvar objetivos
-                  </button>
-                </div>
-              </form>
-            </Section>
-
-            <Section title="Indicadores">
-              <div className="grid gap-3">
-                <MetricCard
-                  label="Custos fixos"
-                  value={brl(totalFixedCosts)}
-                />
-                <MetricCard
-                  label="Meta operacional"
-                  value={brl(operationalGoal)}
-                />
-                <MetricCard
-                  label="Faturamento necessário"
-                  value={brl(requiredRevenue)}
-                  hint={marginBase > 0 ? `Base ${pct(marginBase)}` : "Defina a margem alvo"}
-                />
+          {(settingsError || fixedCostsError) && (
+            <Card title="Erro">
+              <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                <p>{settingsError?.message ?? "general_settings OK"}</p>
+                <p>{fixedCostsError?.message ?? "fixed_costs OK"}</p>
               </div>
-            </Section>
-
-            {(settingsError || fixedCostsError) && (
-              <Section title="Erro">
-                <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                  <p>{settingsError?.message ?? "general_settings OK"}</p>
-                  <p>{fixedCostsError?.message ?? "fixed_costs OK"}</p>
-                </div>
-              </Section>
-            )}
-          </div>
+            </Card>
+          )}
         </div>
       </div>
     </AppShell>
