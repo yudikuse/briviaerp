@@ -1,7 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { AppShell } from "@/components/app-shell";
 import MoneyInput from "@/components/money-input";
-import { Panel, StatCard } from "@/components/panel";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +37,19 @@ function parseDecimalInput(value: FormDataEntryValue | null) {
   const parsed = Number(cleaned);
 
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function decimalDefault(value: number | null | undefined) {
+  if (!value || Number(value) === 0) return "";
+  return String(value).replace(".", ",");
+}
+
+function moneyDefault(value: number | null | undefined) {
+  if (!value || Number(value) === 0) return "";
+  return Number(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 async function updateFixedCost(formData: FormData) {
@@ -84,39 +96,76 @@ async function updateGoals(formData: FormData) {
 async function updatePricing(formData: FormData) {
   "use server";
 
-  const payload = {
-    default_markup_x: parseDecimalInput(formData.get("default_markup_x")),
-    default_target_margin_pct: parseDecimalInput(
-      formData.get("default_target_margin_pct")
-    ),
-    default_taxes_pct: parseDecimalInput(formData.get("default_taxes_pct")),
-    default_card_fee_pct: parseDecimalInput(
-      formData.get("default_card_fee_pct")
-    ),
-    default_marketing_pct: parseDecimalInput(
-      formData.get("default_marketing_pct")
-    ),
-    default_other_deductions_pct: parseDecimalInput(
-      formData.get("default_other_deductions_pct")
-    ),
-    default_packaging_rs: parseMoneyInput(formData.get("default_packaging_rs")),
-    default_piece_expense_rs: parseMoneyInput(
-      formData.get("default_piece_expense_rs")
-    ),
-  };
-
   await supabaseAdmin
     .from("general_settings")
-    .update(payload)
+    .update({
+      default_markup_x: parseDecimalInput(formData.get("default_markup_x")),
+      default_target_margin_pct: parseDecimalInput(
+        formData.get("default_target_margin_pct")
+      ),
+      default_taxes_pct: parseDecimalInput(formData.get("default_taxes_pct")),
+      default_card_fee_pct: parseDecimalInput(
+        formData.get("default_card_fee_pct")
+      ),
+      default_marketing_pct: parseDecimalInput(
+        formData.get("default_marketing_pct")
+      ),
+      default_other_deductions_pct: parseDecimalInput(
+        formData.get("default_other_deductions_pct")
+      ),
+      default_packaging_rs: parseMoneyInput(formData.get("default_packaging_rs")),
+      default_piece_expense_rs: parseMoneyInput(
+        formData.get("default_piece_expense_rs")
+      ),
+    })
     .eq("id", 1);
 
   revalidatePath("/configuracoes");
 }
 
-function decimalDefault(value: number | null | undefined) {
-  if (!value || Number(value) === 0) return "";
-  return String(value).replace(".", ",");
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[28px] border border-[#e9dfd2] bg-white p-5 shadow-[0_10px_30px_rgba(51,46,43,0.06)]">
+      <h2 className="text-lg font-semibold text-[#2f2a26]">{title}</h2>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
 }
+
+function Label({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <span className="text-sm font-medium text-[#6c6258]">{children}</span>;
+}
+
+function MetricCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-[#ece3d9] bg-[#fcfaf7] p-4">
+      <p className="text-sm text-[#7a7067]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-[#2f2a26]">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-[#9a8f84]">{hint}</p> : null}
+    </div>
+  );
+}
+
+const inputClass =
+  "h-12 w-full rounded-2xl border border-[#e7ddd1] bg-[#fbf8f4] px-4 text-sm text-[#2f2a26] outline-none placeholder:text-[#b2a79b] focus:border-[#d8c1a0]";
 
 export default async function ConfiguracoesPage() {
   const [
@@ -149,86 +198,35 @@ export default async function ConfiguracoesPage() {
   const requiredRevenue =
     marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
 
-  const defaultMonthlyProfitGoal =
-    monthlyProfitGoal > 0
-      ? monthlyProfitGoal.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : "";
-
-  const defaultCashGoal =
-    cashGoal > 0
-      ? cashGoal.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : "";
-
-  const defaultPurchaseGoal =
-    purchaseGoal > 0
-      ? purchaseGoal.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : "";
-
-  const defaultPackaging =
-    Number(settings?.default_packaging_rs ?? 0) > 0
-      ? Number(settings?.default_packaging_rs).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : "";
-
-  const defaultPieceExpense =
-    Number(settings?.default_piece_expense_rs ?? 0) > 0
-      ? Number(settings?.default_piece_expense_rs).toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : "";
-
   return (
-    <AppShell
-      title="Configurações gerais"
-      subtitle=""
-    >
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="space-y-4">
-          <Panel title="Lista de custos fixos">
-            <div className="space-y-2">
-              {(fixedCosts ?? []).map((item) => {
-                const defaultMoney =
-                  Number(item.valor_mensal ?? 0) > 0
-                    ? Number(item.valor_mensal).toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })
-                    : "";
-
-                return (
+    <AppShell title="Configurações gerais" subtitle="">
+      <div className="rounded-[34px] border border-[#d8cdbf] bg-[#f5f1ea] p-4 md:p-6">
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="space-y-4">
+            <Section title="Custos fixos">
+              <div className="space-y-2">
+                {(fixedCosts ?? []).map((item) => (
                   <form
                     key={item.id}
                     action={updateFixedCost}
-                    className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-black/10 px-3 py-3"
+                    className="rounded-[22px] border border-[#ece3d9] bg-[#fcfaf7] p-3"
                   >
                     <input type="hidden" name="id" value={item.id} />
 
-                    <div className="flex min-w-[640px] items-center gap-3">
-                      <div className="w-[140px] shrink-0 text-sm font-medium text-white">
+                    <div className="grid gap-3 lg:grid-cols-[150px_minmax(0,1fr)_110px_96px] lg:items-center">
+                      <div className="text-sm font-medium text-[#2f2a26]">
                         {item.descricao}
                       </div>
 
                       <MoneyInput
                         name="valor_mensal"
-                        defaultValue={defaultMoney}
+                        defaultValue={moneyDefault(item.valor_mensal)}
                         prefix="R$"
-                        wrapperClassName="min-w-0 flex-1"
-                        className="h-10 w-full rounded-xl border border-[var(--line)] bg-[#f8f2ea] px-3 text-sm text-[var(--dark-text)] outline-none"
+                        wrapperClassName="w-full"
+                        className={inputClass}
                       />
 
-                      <label className="flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[var(--line)] bg-white/5 px-3 text-sm text-[var(--gold-soft)]">
+                      <label className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#e7ddd1] bg-white px-3 text-sm text-[#5f554b]">
                         <input
                           type="checkbox"
                           name="ativo"
@@ -240,200 +238,200 @@ export default async function ConfiguracoesPage() {
 
                       <button
                         type="submit"
-                        className="h-10 shrink-0 rounded-xl bg-[var(--gold)] px-4 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
+                        className="h-12 rounded-2xl bg-[#dfc16c] px-4 text-sm font-semibold text-[#2f2a26] transition hover:opacity-90"
                       >
                         Salvar
                       </button>
                     </div>
                   </form>
-                );
-              })}
+                ))}
 
-              {!fixedCosts?.length && (
-                <div className="rounded-2xl border border-[var(--line)] bg-black/10 p-4 text-sm text-[var(--muted)]">
-                  Nenhum custo fixo encontrado.
+                {!fixedCosts?.length && (
+                  <div className="rounded-[22px] border border-[#ece3d9] bg-[#fcfaf7] p-4 text-sm text-[#7a7067]">
+                    Nenhum custo fixo encontrado.
+                  </div>
+                )}
+              </div>
+            </Section>
+
+            <Section title="Padrões de precificação">
+              <form action={updatePricing} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="flex flex-col gap-2">
+                    <Label>Markup (x)</Label>
+                    <input
+                      name="default_markup_x"
+                      defaultValue={decimalDefault(settings?.default_markup_x)}
+                      inputMode="decimal"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Margem alvo (%)</Label>
+                    <input
+                      name="default_target_margin_pct"
+                      defaultValue={decimalDefault(
+                        settings?.default_target_margin_pct
+                      )}
+                      inputMode="decimal"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Impostos (%)</Label>
+                    <input
+                      name="default_taxes_pct"
+                      defaultValue={decimalDefault(settings?.default_taxes_pct)}
+                      inputMode="decimal"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Taxa cartão (%)</Label>
+                    <input
+                      name="default_card_fee_pct"
+                      defaultValue={decimalDefault(settings?.default_card_fee_pct)}
+                      inputMode="decimal"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Marketing (%)</Label>
+                    <input
+                      name="default_marketing_pct"
+                      defaultValue={decimalDefault(settings?.default_marketing_pct)}
+                      inputMode="decimal"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Outras deduções (%)</Label>
+                    <input
+                      name="default_other_deductions_pct"
+                      defaultValue={decimalDefault(
+                        settings?.default_other_deductions_pct
+                      )}
+                      inputMode="decimal"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Embalagem</Label>
+                    <MoneyInput
+                      name="default_packaging_rs"
+                      defaultValue={moneyDefault(settings?.default_packaging_rs)}
+                      prefix="R$"
+                      wrapperClassName="w-full"
+                      className={inputClass}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-2">
+                    <Label>Despesa por peça</Label>
+                    <MoneyInput
+                      name="default_piece_expense_rs"
+                      defaultValue={moneyDefault(
+                        settings?.default_piece_expense_rs
+                      )}
+                      prefix="R$"
+                      wrapperClassName="w-full"
+                      className={inputClass}
+                    />
+                  </label>
                 </div>
-              )}
-            </div>
-          </Panel>
 
-          <Panel title="Padrões de precificação">
-            <form action={updatePricing} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Markup (x)</span>
-                  <input
-                    name="default_markup_x"
-                    defaultValue={decimalDefault(settings?.default_markup_x)}
-                    inputMode="decimal"
-                    className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                  />
-                </label>
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="h-12 rounded-2xl bg-[#dfc16c] px-5 text-sm font-semibold text-[#2f2a26] transition hover:opacity-90"
+                  >
+                    Salvar padrões
+                  </button>
+                </div>
+              </form>
+            </Section>
+          </div>
 
+          <div className="space-y-4">
+            <Section title="Objetivos">
+              <form action={updateGoals} className="space-y-4">
                 <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Margem alvo (%)</span>
-                  <input
-                    name="default_target_margin_pct"
-                    defaultValue={decimalDefault(
-                      settings?.default_target_margin_pct
-                    )}
-                    inputMode="decimal"
-                    className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Impostos (%)</span>
-                  <input
-                    name="default_taxes_pct"
-                    defaultValue={decimalDefault(settings?.default_taxes_pct)}
-                    inputMode="decimal"
-                    className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Taxa cartão (%)</span>
-                  <input
-                    name="default_card_fee_pct"
-                    defaultValue={decimalDefault(settings?.default_card_fee_pct)}
-                    inputMode="decimal"
-                    className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Marketing (%)</span>
-                  <input
-                    name="default_marketing_pct"
-                    defaultValue={decimalDefault(settings?.default_marketing_pct)}
-                    inputMode="decimal"
-                    className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Outras deduções (%)</span>
-                  <input
-                    name="default_other_deductions_pct"
-                    defaultValue={decimalDefault(
-                      settings?.default_other_deductions_pct
-                    )}
-                    inputMode="decimal"
-                    className="h-12 rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Embalagem</span>
+                  <Label>Meta de lucro</Label>
                   <MoneyInput
-                    name="default_packaging_rs"
-                    defaultValue={defaultPackaging}
+                    name="monthly_profit_goal_rs"
+                    defaultValue={moneyDefault(monthlyProfitGoal)}
                     prefix="R$"
                     wrapperClassName="w-full"
-                    className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                    className={inputClass}
                   />
                 </label>
 
                 <label className="flex flex-col gap-2">
-                  <span className="text-sm text-[var(--muted)]">Despesa por peça</span>
+                  <Label>Caixa</Label>
                   <MoneyInput
-                    name="default_piece_expense_rs"
-                    defaultValue={defaultPieceExpense}
+                    name="cash_goal_rs"
+                    defaultValue={moneyDefault(cashGoal)}
                     prefix="R$"
                     wrapperClassName="w-full"
-                    className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
+                    className={inputClass}
                   />
                 </label>
+
+                <label className="flex flex-col gap-2">
+                  <Label>Compras</Label>
+                  <MoneyInput
+                    name="purchase_goal_rs"
+                    defaultValue={moneyDefault(purchaseGoal)}
+                    prefix="R$"
+                    wrapperClassName="w-full"
+                    className={inputClass}
+                  />
+                </label>
+
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="h-12 rounded-2xl bg-[#dfc16c] px-5 text-sm font-semibold text-[#2f2a26] transition hover:opacity-90"
+                  >
+                    Salvar objetivos
+                  </button>
+                </div>
+              </form>
+            </Section>
+
+            <Section title="Indicadores">
+              <div className="grid gap-3">
+                <MetricCard
+                  label="Custos fixos"
+                  value={brl(totalFixedCosts)}
+                />
+                <MetricCard
+                  label="Meta operacional"
+                  value={brl(operationalGoal)}
+                />
+                <MetricCard
+                  label="Faturamento necessário"
+                  value={brl(requiredRevenue)}
+                  hint={marginBase > 0 ? `Base ${pct(marginBase)}` : "Defina a margem alvo"}
+                />
               </div>
+            </Section>
 
-              <button
-                type="submit"
-                className="h-10 rounded-xl bg-[var(--gold)] px-4 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
-              >
-                Salvar padrões
-              </button>
-            </form>
-          </Panel>
-        </div>
-
-        <div className="space-y-4">
-          <Panel title="Objetivos">
-            <form action={updateGoals} className="space-y-4">
-              <label className="flex flex-col gap-2">
-                <span className="text-sm text-[var(--muted)]">
-                  Meta de lucro
-                </span>
-                <MoneyInput
-                  name="monthly_profit_goal_rs"
-                  defaultValue={defaultMonthlyProfitGoal}
-                  prefix="R$"
-                  wrapperClassName="w-full"
-                  className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                />
-              </label>
-
-              <label className="flex flex-col gap-2">
-                <span className="text-sm text-[var(--muted)]">Caixa</span>
-                <MoneyInput
-                  name="cash_goal_rs"
-                  defaultValue={defaultCashGoal}
-                  prefix="R$"
-                  wrapperClassName="w-full"
-                  className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                />
-              </label>
-
-              <label className="flex flex-col gap-2">
-                <span className="text-sm text-[var(--muted)]">Compras</span>
-                <MoneyInput
-                  name="purchase_goal_rs"
-                  defaultValue={defaultPurchaseGoal}
-                  prefix="R$"
-                  wrapperClassName="w-full"
-                  className="h-12 w-full rounded-2xl border border-[var(--line)] bg-[#f8f2ea] px-4 text-sm text-[var(--dark-text)] outline-none"
-                />
-              </label>
-
-              <button
-                type="submit"
-                className="h-10 rounded-xl bg-[var(--gold)] px-4 text-sm font-semibold text-[#2d2826] transition hover:opacity-90"
-              >
-                Salvar objetivos
-              </button>
-            </form>
-          </Panel>
-
-          <Panel title="Indicadores calculados">
-            <div className="grid gap-3">
-              <StatCard
-                label="Total custos fixos"
-                value={brl(totalFixedCosts)}
-              />
-              <StatCard
-                label="Meta operacional"
-                value={brl(operationalGoal)}
-              />
-              <StatCard
-                label="Faturamento necessário"
-                value={brl(requiredRevenue)}
-                hint={
-                  marginBase > 0
-                    ? `Base ${pct(marginBase)}`
-                    : "Defina a margem alvo"
-                }
-              />
-            </div>
-          </Panel>
-
-          {(settingsError || fixedCostsError) && (
-            <Panel title="Erro">
-              <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
-                <p>{settingsError?.message ?? "general_settings OK"}</p>
-                <p>{fixedCostsError?.message ?? "fixed_costs OK"}</p>
-              </div>
-            </Panel>
-          )}
+            {(settingsError || fixedCostsError) && (
+              <Section title="Erro">
+                <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  <p>{settingsError?.message ?? "general_settings OK"}</p>
+                  <p>{fixedCostsError?.message ?? "fixed_costs OK"}</p>
+                </div>
+              </Section>
+            )}
+          </div>
         </div>
       </div>
     </AppShell>
