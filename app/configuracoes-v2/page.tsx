@@ -1,4 +1,6 @@
+import { revalidatePath } from "next/cache";
 import { AppShell } from "@/components/app-shell";
+import MoneyInput from "@/components/money-input";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,48 @@ function brl(value: number) {
 
 function pct(value: number) {
   return `${(value || 0).toFixed(2).replace(".", ",")}%`;
+}
+
+function parseMoneyInput(value: FormDataEntryValue | null) {
+  if (!value) return 0;
+
+  const cleaned = String(value)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function moneyDefault(value: number | null | undefined) {
+  if (!value || Number(value) === 0) return "";
+  return Number(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+async function updateGoals(formData: FormData) {
+  "use server";
+
+  const monthlyProfitGoal = parseMoneyInput(
+    formData.get("monthly_profit_goal_rs")
+  );
+  const cashGoal = parseMoneyInput(formData.get("cash_goal_rs"));
+  const purchaseGoal = parseMoneyInput(formData.get("purchase_goal_rs"));
+
+  await supabaseAdmin
+    .from("general_settings")
+    .update({
+      monthly_profit_goal_rs: monthlyProfitGoal,
+      cash_goal_rs: cashGoal,
+      purchase_goal_rs: purchaseGoal,
+    })
+    .eq("id", 1);
+
+  revalidatePath("/configuracoes-v2");
 }
 
 function Section({
@@ -92,7 +136,9 @@ function ValueField({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
+      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
+        {label}
+      </p>
       <div className="flex min-h-[42px] items-center rounded-[10px] bg-white px-3 text-[14px] text-[#111827] lg:min-h-[44px]">
         {value}
       </div>
@@ -152,13 +198,14 @@ function DesktopTable({
           {rows.map((row, idx) => (
             <tr
               key={idx}
-              className={idx !== rows.length - 1 ? "border-t border-[#f1f4f8]" : "border-t border-[#f1f4f8]"}
+              className={
+                idx !== rows.length - 1
+                  ? "border-t border-[#f1f4f8]"
+                  : "border-t border-[#f1f4f8]"
+              }
             >
               {row.map((cell, cellIdx) => (
-                <td
-                  key={cellIdx}
-                  className="px-4 py-4 text-[14px] text-[#111827]"
-                >
+                <td key={cellIdx} className="px-4 py-4 text-[14px] text-[#111827]">
                   {cell}
                 </td>
               ))}
@@ -235,7 +282,9 @@ export default async function ConfiguracoesV2Page() {
 
   const fixedCostRows = (fixedCosts ?? []).map((item) => ({
     label: item.descricao,
-    value: `${brl(Number(item.valor_mensal ?? 0))} • ${item.ativo ? "Ativo" : "Inativo"}`,
+    value: `${brl(Number(item.valor_mensal ?? 0))} • ${
+      item.ativo ? "Ativo" : "Inativo"
+    }`,
   }));
 
   return (
@@ -243,7 +292,11 @@ export default async function ConfiguracoesV2Page() {
       <div className="space-y-4 lg:space-y-5">
         <div className="grid gap-3 md:grid-cols-3">
           <MetricCard label="Custos fixos" value={brl(totalFixedCosts)} />
-          <MetricCard label="Meta operacional" value={brl(operationalGoal)} accent />
+          <MetricCard
+            label="Meta operacional"
+            value={brl(operationalGoal)}
+            accent
+          />
           <MetricCard
             label="Faturamento necessário"
             value={brl(requiredRevenue)}
@@ -251,7 +304,7 @@ export default async function ConfiguracoesV2Page() {
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+        <div className="grid items-start gap-4 xl:grid-cols-[1.08fr_0.92fr]">
           <Section title="Padrões de precificação">
             <MobileList rows={pricingRows} />
             <DesktopTable
@@ -261,11 +314,55 @@ export default async function ConfiguracoesV2Page() {
           </Section>
 
           <Section title="Objetivos">
-            <div className="grid gap-3">
-              <ValueField label="Meta de lucro" value={brl(monthlyProfitGoal)} />
-              <ValueField label="Caixa" value={brl(cashGoal)} />
-              <ValueField label="Compras" value={brl(purchaseGoal)} />
-            </div>
+            <form action={updateGoals} className="grid gap-3">
+              <div className="space-y-2">
+                <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
+                  Meta de lucro
+                </p>
+                <MoneyInput
+                  name="monthly_profit_goal_rs"
+                  defaultValue={moneyDefault(monthlyProfitGoal)}
+                  prefix="R$"
+                  wrapperClassName="w-full"
+                  className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
+                  Caixa
+                </p>
+                <MoneyInput
+                  name="cash_goal_rs"
+                  defaultValue={moneyDefault(cashGoal)}
+                  prefix="R$"
+                  wrapperClassName="w-full"
+                  className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
+                  Compras
+                </p>
+                <MoneyInput
+                  name="purchase_goal_rs"
+                  defaultValue={moneyDefault(purchaseGoal)}
+                  prefix="R$"
+                  wrapperClassName="w-full"
+                  className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+                />
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 lg:h-[44px]"
+                >
+                  Salvar objetivos
+                </button>
+              </div>
+            </form>
           </Section>
         </div>
 
