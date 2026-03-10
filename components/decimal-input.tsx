@@ -1,30 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type DecimalInputProps = {
   name: string;
   defaultValue?: string;
   className?: string;
   placeholder?: string;
-  maxDecimals?: number;
 };
 
-function sanitizeDecimal(value: string, maxDecimals: number) {
-  const normalized = value.replace(/\./g, ",").replace(/[^\d,]/g, "");
-  const firstCommaIndex = normalized.indexOf(",");
+function normalizeInitialValue(value: string) {
+  if (!value) return "";
+  return value
+    .replace(/\./g, ",")
+    .replace(/[^0-9,]/g, "")
+    .replace(/,+/g, ",")
+    .replace(/^,/, "");
+}
 
-  if (firstCommaIndex === -1) {
-    return normalized;
+function sanitizeDecimalInput(value: string) {
+  const normalized = value.replace(/\./g, ",");
+  let result = "";
+  let hasComma = false;
+
+  for (const char of normalized) {
+    if (/\d/.test(char)) {
+      result += char;
+      continue;
+    }
+
+    if (char === "," && !hasComma) {
+      result += char;
+      hasComma = true;
+    }
   }
 
-  const integerPart = normalized.slice(0, firstCommaIndex);
-  const decimalPart = normalized
-    .slice(firstCommaIndex + 1)
-    .replace(/,/g, "")
-    .slice(0, maxDecimals);
-
-  return `${integerPart},${decimalPart}`;
+  return result;
 }
 
 export default function DecimalInput({
@@ -32,11 +43,10 @@ export default function DecimalInput({
   defaultValue = "",
   className = "",
   placeholder = "0,00",
-  maxDecimals = 2,
 }: DecimalInputProps) {
-  const [value, setValue] = useState(() =>
-    sanitizeDecimal(defaultValue, maxDecimals)
-  );
+  const [value, setValue] = useState(() => normalizeInitialValue(defaultValue));
+
+  const displayValue = useMemo(() => value, [value]);
 
   return (
     <input
@@ -45,10 +55,10 @@ export default function DecimalInput({
       inputMode="decimal"
       autoComplete="off"
       spellCheck={false}
+      value={displayValue}
       placeholder={placeholder}
-      value={value}
       onChange={(e) => {
-        setValue(sanitizeDecimal(e.target.value, maxDecimals));
+        setValue(sanitizeDecimalInput(e.target.value));
       }}
       className={className}
     />
