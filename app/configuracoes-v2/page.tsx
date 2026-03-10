@@ -29,12 +29,27 @@ function parseMoneyInput(value: FormDataEntryValue | null) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function parseDecimalInput(value: FormDataEntryValue | null) {
+  if (!value) return 0;
+
+  const raw = String(value).trim().replace(",", ".");
+  const cleaned = raw.replace(/[^0-9.]/g, "");
+  const parsed = Number(cleaned);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function moneyDefault(value: number | null | undefined) {
   if (!value || Number(value) === 0) return "";
   return Number(value).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function decimalDefault(value: number | null | undefined) {
+  if (!value && value !== 0) return "";
+  return String(value).replace(".", ",");
 }
 
 async function updateGoals(formData: FormData) {
@@ -52,6 +67,36 @@ async function updateGoals(formData: FormData) {
       monthly_profit_goal_rs: monthlyProfitGoal,
       cash_goal_rs: cashGoal,
       purchase_goal_rs: purchaseGoal,
+    })
+    .eq("id", 1);
+
+  revalidatePath("/configuracoes-v2");
+}
+
+async function updatePricing(formData: FormData) {
+  "use server";
+
+  await supabaseAdmin
+    .from("general_settings")
+    .update({
+      default_markup_x: parseDecimalInput(formData.get("default_markup_x")),
+      default_target_margin_pct: parseDecimalInput(
+        formData.get("default_target_margin_pct")
+      ),
+      default_taxes_pct: parseDecimalInput(formData.get("default_taxes_pct")),
+      default_card_fee_pct: parseDecimalInput(
+        formData.get("default_card_fee_pct")
+      ),
+      default_marketing_pct: parseDecimalInput(
+        formData.get("default_marketing_pct")
+      ),
+      default_other_deductions_pct: parseDecimalInput(
+        formData.get("default_other_deductions_pct")
+      ),
+      default_packaging_rs: parseMoneyInput(formData.get("default_packaging_rs")),
+      default_piece_expense_rs: parseMoneyInput(
+        formData.get("default_piece_expense_rs")
+      ),
     })
     .eq("id", 1);
 
@@ -146,6 +191,24 @@ function ValueField({
   );
 }
 
+function DecimalTextInput({
+  name,
+  defaultValue,
+}: {
+  name: string;
+  defaultValue: string;
+}) {
+  return (
+    <input
+      name={name}
+      type="text"
+      inputMode="decimal"
+      defaultValue={defaultValue}
+      className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+    />
+  );
+}
+
 function MobileList({
   rows,
 }: {
@@ -196,14 +259,7 @@ function DesktopTable({
 
         <tbody>
           {rows.map((row, idx) => (
-            <tr
-              key={idx}
-              className={
-                idx !== rows.length - 1
-                  ? "border-t border-[#f1f4f8]"
-                  : "border-t border-[#f1f4f8]"
-              }
-            >
+            <tr key={idx} className="border-t border-[#f1f4f8]">
               {row.map((cell, cellIdx) => (
                 <td key={cellIdx} className="px-4 py-4 text-[14px] text-[#111827]">
                   {cell}
@@ -306,11 +362,207 @@ export default async function ConfiguracoesV2Page() {
 
         <div className="grid items-start gap-4 xl:grid-cols-[1.08fr_0.92fr]">
           <Section title="Padrões de precificação">
-            <MobileList rows={pricingRows} />
-            <DesktopTable
-              headers={["Campo", "Valor"]}
-              rows={pricingRows.map((row) => [row.label, row.value])}
-            />
+            <form action={updatePricing} className="space-y-4">
+              <div className="grid gap-3 lg:hidden">
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Markup (x)</p>
+                  <DecimalTextInput
+                    name="default_markup_x"
+                    defaultValue={decimalDefault(settings?.default_markup_x)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Margem alvo (%)</p>
+                  <DecimalTextInput
+                    name="default_target_margin_pct"
+                    defaultValue={decimalDefault(settings?.default_target_margin_pct)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Impostos (%)</p>
+                  <DecimalTextInput
+                    name="default_taxes_pct"
+                    defaultValue={decimalDefault(settings?.default_taxes_pct)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Taxa cartão (%)</p>
+                  <DecimalTextInput
+                    name="default_card_fee_pct"
+                    defaultValue={decimalDefault(settings?.default_card_fee_pct)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Marketing (%)</p>
+                  <DecimalTextInput
+                    name="default_marketing_pct"
+                    defaultValue={decimalDefault(settings?.default_marketing_pct)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Outras deduções (%)</p>
+                  <DecimalTextInput
+                    name="default_other_deductions_pct"
+                    defaultValue={decimalDefault(
+                      settings?.default_other_deductions_pct
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Embalagem</p>
+                  <MoneyInput
+                    name="default_packaging_rs"
+                    defaultValue={moneyDefault(settings?.default_packaging_rs)}
+                    prefix="R$"
+                    wrapperClassName="w-full"
+                    className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-[#667085]">Despesa por peça</p>
+                  <MoneyInput
+                    name="default_piece_expense_rs"
+                    defaultValue={moneyDefault(
+                      settings?.default_piece_expense_rs
+                    )}
+                    prefix="R$"
+                    wrapperClassName="w-full"
+                    className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="hidden overflow-hidden rounded-[12px] bg-white lg:block">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">
+                        Campo
+                      </th>
+                      <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">
+                        Valor
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Markup (x)</td>
+                      <td className="px-4 py-3">
+                        <DecimalTextInput
+                          name="default_markup_x"
+                          defaultValue={decimalDefault(settings?.default_markup_x)}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Margem alvo (%)</td>
+                      <td className="px-4 py-3">
+                        <DecimalTextInput
+                          name="default_target_margin_pct"
+                          defaultValue={decimalDefault(
+                            settings?.default_target_margin_pct
+                          )}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Impostos (%)</td>
+                      <td className="px-4 py-3">
+                        <DecimalTextInput
+                          name="default_taxes_pct"
+                          defaultValue={decimalDefault(settings?.default_taxes_pct)}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Taxa cartão (%)</td>
+                      <td className="px-4 py-3">
+                        <DecimalTextInput
+                          name="default_card_fee_pct"
+                          defaultValue={decimalDefault(
+                            settings?.default_card_fee_pct
+                          )}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Marketing (%)</td>
+                      <td className="px-4 py-3">
+                        <DecimalTextInput
+                          name="default_marketing_pct"
+                          defaultValue={decimalDefault(
+                            settings?.default_marketing_pct
+                          )}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Outras deduções (%)</td>
+                      <td className="px-4 py-3">
+                        <DecimalTextInput
+                          name="default_other_deductions_pct"
+                          defaultValue={decimalDefault(
+                            settings?.default_other_deductions_pct
+                          )}
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Embalagem</td>
+                      <td className="px-4 py-3">
+                        <MoneyInput
+                          name="default_packaging_rs"
+                          defaultValue={moneyDefault(
+                            settings?.default_packaging_rs
+                          )}
+                          prefix="R$"
+                          wrapperClassName="w-full"
+                          className="h-[44px] w-full rounded-[10px] bg-[#f8fafc] px-3 text-[14px] text-[#111827] outline-none"
+                        />
+                      </td>
+                    </tr>
+
+                    <tr className="border-t border-[#f1f4f8]">
+                      <td className="px-4 py-3 text-[14px] text-[#111827]">Despesa por peça</td>
+                      <td className="px-4 py-3">
+                        <MoneyInput
+                          name="default_piece_expense_rs"
+                          defaultValue={moneyDefault(
+                            settings?.default_piece_expense_rs
+                          )}
+                          prefix="R$"
+                          wrapperClassName="w-full"
+                          className="h-[44px] w-full rounded-[10px] bg-[#f8fafc] px-3 text-[14px] text-[#111827] outline-none"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 lg:h-[44px]"
+                >
+                  Salvar padrões
+                </button>
+              </div>
+            </form>
           </Section>
 
           <Section title="Objetivos">
