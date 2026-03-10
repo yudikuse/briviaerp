@@ -24,7 +24,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[12px] border border-[#e7ebf0] bg-white p-4 lg:rounded-[14px] lg:p-5">
+    <section className="rounded-[14px] bg-[#f6f7f9] p-4 lg:rounded-[16px] lg:p-5">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-[#111827] lg:text-[17px]">
           {title}
@@ -50,16 +50,14 @@ function MetricCard({
   return (
     <div
       className={[
-        "rounded-[12px] border p-4 lg:rounded-[14px] lg:p-5",
-        accent
-          ? "border-[#ff6a2b] bg-[#ff6a2b] text-white"
-          : "border-[#e7ebf0] bg-white text-[#111827]",
+        "rounded-[14px] p-4 lg:p-5",
+        accent ? "bg-[#ff6a2b] text-white" : "bg-[#f6f7f9] text-[#111827]",
       ].join(" ")}
     >
       <p className={accent ? "text-[12px] text-white/80" : "text-[12px] text-[#667085]"}>
         {label}
       </p>
-      <p className="mt-2 text-[18px] font-semibold tracking-[-0.03em] lg:mt-3 lg:text-[24px]">
+      <p className="mt-2 text-[18px] font-semibold tracking-[-0.03em] lg:text-[24px]">
         {value}
       </p>
       {hint ? (
@@ -81,7 +79,7 @@ function ValueField({
   return (
     <div className="space-y-2">
       <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
-      <div className="flex min-h-[40px] items-center rounded-[10px] border border-[#e6eaf0] bg-[#f8fafc] px-3 text-[14px] text-[#111827]">
+      <div className="flex min-h-[40px] items-center rounded-[10px] bg-white px-3 text-[14px] text-[#111827]">
         {value}
       </div>
     </div>
@@ -94,9 +92,15 @@ function MobileList({
   rows: { label: string; value: string }[];
 }) {
   return (
-    <div className="divide-y divide-[#edf0f4] rounded-[12px] border border-[#edf0f4] bg-white lg:hidden">
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-start justify-between gap-4 px-4 py-3">
+    <div className="overflow-hidden rounded-[12px] bg-white lg:hidden">
+      {rows.map((row, idx) => (
+        <div
+          key={row.label}
+          className={[
+            "flex items-start justify-between gap-4 px-4 py-3",
+            idx !== rows.length - 1 ? "border-b border-[#edf0f4]" : "",
+          ].join(" ")}
+        >
           <div className="text-[14px] text-[#111827]">{row.label}</div>
           <div className="shrink-0 text-right text-[14px] font-medium text-[#111827]">
             {row.value}
@@ -115,10 +119,10 @@ function DesktopTable({
   rows: string[][];
 }) {
   return (
-    <div className="hidden overflow-x-auto lg:block">
+    <div className="hidden overflow-hidden rounded-[12px] bg-white lg:block">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-[#edf0f4]">
+          <tr>
             {headers.map((header) => (
               <th
                 key={header}
@@ -131,7 +135,7 @@ function DesktopTable({
         </thead>
         <tbody>
           {rows.map((row, idx) => (
-            <tr key={idx} className="border-b border-[#f1f4f8] last:border-b-0">
+            <tr key={idx} className={idx !== rows.length - 1 ? "border-b border-[#f1f4f8]" : ""}>
               {row.map((cell, cellIdx) => (
                 <td key={cellIdx} className="px-3 py-3 text-[14px] text-[#111827]">
                   {cell}
@@ -247,7 +251,7 @@ export default async function ConfiguracoesV2Page() {
         <Section
           title="Custos fixos"
           right={
-            <div className="rounded-full bg-[#f3f4f6] px-3 py-1 text-[12px] font-medium text-[#667085]">
+            <div className="rounded-full bg-white px-3 py-1 text-[12px] font-medium text-[#667085]">
               {fixedCosts?.length ?? 0} itens
             </div>
           }
