@@ -24,9 +24,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[14px] border border-[#e9edf3] bg-white p-4 lg:p-5">
+    <section className="rounded-[12px] border border-[#e7ebf0] bg-white p-4 lg:rounded-[14px] lg:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-[#111827] lg:text-[18px]">
+        <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-[#111827] lg:text-[17px]">
           {title}
         </h2>
         {right}
@@ -50,20 +50,20 @@ function MetricCard({
   return (
     <div
       className={[
-        "rounded-[14px] border p-4 lg:p-5",
+        "rounded-[12px] border p-4 lg:rounded-[14px] lg:p-5",
         accent
           ? "border-[#ff6a2b] bg-[#ff6a2b] text-white"
-          : "border-[#e9edf3] bg-white text-[#111827]",
+          : "border-[#e7ebf0] bg-white text-[#111827]",
       ].join(" ")}
     >
       <p className={accent ? "text-[12px] text-white/80" : "text-[12px] text-[#667085]"}>
         {label}
       </p>
-      <p className="mt-3 text-[22px] font-semibold tracking-[-0.03em] lg:text-[28px]">
+      <p className="mt-2 text-[18px] font-semibold tracking-[-0.03em] lg:mt-3 lg:text-[24px]">
         {value}
       </p>
       {hint ? (
-        <p className={accent ? "mt-2 text-[11px] text-white/80" : "mt-2 text-[11px] text-[#98a2b3]"}>
+        <p className={accent ? "mt-1 text-[11px] text-white/80" : "mt-1 text-[11px] text-[#98a2b3]"}>
           {hint}
         </p>
       ) : null}
@@ -71,28 +71,52 @@ function MetricCard({
   );
 }
 
-function ValuePill({
+function ValueField({
+  label,
   value,
 }: {
+  label: string;
   value: string;
 }) {
   return (
-    <div className="flex min-h-[40px] items-center rounded-[10px] border border-[#e6eaf0] bg-[#f8fafc] px-3 text-[14px] text-[#111827]">
-      {value}
+    <div className="space-y-2">
+      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
+      <div className="flex min-h-[40px] items-center rounded-[10px] border border-[#e6eaf0] bg-[#f8fafc] px-3 text-[14px] text-[#111827]">
+        {value}
+      </div>
     </div>
   );
 }
 
-function CompactTable({
+function MobileList({
+  rows,
+}: {
+  rows: { label: string; value: string }[];
+}) {
+  return (
+    <div className="divide-y divide-[#edf0f4] rounded-[12px] border border-[#edf0f4] bg-white lg:hidden">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-start justify-between gap-4 px-4 py-3">
+          <div className="text-[14px] text-[#111827]">{row.label}</div>
+          <div className="shrink-0 text-right text-[14px] font-medium text-[#111827]">
+            {row.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DesktopTable({
   headers,
   rows,
 }: {
   headers: string[];
-  rows: (string | React.ReactNode)[][];
+  rows: string[][];
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-[620px] w-full border-collapse">
+    <div className="hidden overflow-x-auto lg:block">
+      <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-[#edf0f4]">
             {headers.map((header) => (
@@ -109,10 +133,7 @@ function CompactTable({
           {rows.map((row, idx) => (
             <tr key={idx} className="border-b border-[#f1f4f8] last:border-b-0">
               {row.map((cell, cellIdx) => (
-                <td
-                  key={cellIdx}
-                  className="px-3 py-3 text-[14px] text-[#111827]"
-                >
+                <td key={cellIdx} className="px-3 py-3 text-[14px] text-[#111827]">
                   {cell}
                 </td>
               ))}
@@ -152,10 +173,50 @@ export default async function ConfiguracoesV2Page() {
   const requiredRevenue =
     marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
 
+  const pricingRows = [
+    {
+      label: "Markup (x)",
+      value: String(settings?.default_markup_x ?? 0).replace(".", ","),
+    },
+    {
+      label: "Margem alvo (%)",
+      value: pct(Number(settings?.default_target_margin_pct ?? 0)),
+    },
+    {
+      label: "Impostos (%)",
+      value: pct(Number(settings?.default_taxes_pct ?? 0)),
+    },
+    {
+      label: "Taxa cartão (%)",
+      value: pct(Number(settings?.default_card_fee_pct ?? 0)),
+    },
+    {
+      label: "Marketing (%)",
+      value: pct(Number(settings?.default_marketing_pct ?? 0)),
+    },
+    {
+      label: "Outras deduções (%)",
+      value: pct(Number(settings?.default_other_deductions_pct ?? 0)),
+    },
+    {
+      label: "Embalagem",
+      value: brl(Number(settings?.default_packaging_rs ?? 0)),
+    },
+    {
+      label: "Despesa por peça",
+      value: brl(Number(settings?.default_piece_expense_rs ?? 0)),
+    },
+  ];
+
+  const fixedCostRows = (fixedCosts ?? []).map((item) => ({
+    label: item.descricao,
+    value: `${brl(Number(item.valor_mensal ?? 0))} • ${item.ativo ? "Ativo" : "Inativo"}`,
+  }));
+
   return (
     <AppShell title="Configurações" subtitle="">
       <div className="space-y-4 lg:space-y-5">
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-3">
           <MetricCard label="Custos fixos" value={brl(totalFixedCosts)} />
           <MetricCard label="Meta operacional" value={brl(operationalGoal)} accent />
           <MetricCard
@@ -165,37 +226,20 @@ export default async function ConfiguracoesV2Page() {
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <Section title="Padrões de precificação">
-            <CompactTable
+            <MobileList rows={pricingRows} />
+            <DesktopTable
               headers={["Campo", "Valor"]}
-              rows={[
-                ["Markup (x)", String(settings?.default_markup_x ?? 0).replace(".", ",")],
-                ["Margem alvo (%)", pct(Number(settings?.default_target_margin_pct ?? 0))],
-                ["Impostos (%)", pct(Number(settings?.default_taxes_pct ?? 0))],
-                ["Taxa cartão (%)", pct(Number(settings?.default_card_fee_pct ?? 0))],
-                ["Marketing (%)", pct(Number(settings?.default_marketing_pct ?? 0))],
-                ["Outras deduções (%)", pct(Number(settings?.default_other_deductions_pct ?? 0))],
-                ["Embalagem", brl(Number(settings?.default_packaging_rs ?? 0))],
-                ["Despesa por peça", brl(Number(settings?.default_piece_expense_rs ?? 0))],
-              ]}
+              rows={pricingRows.map((row) => [row.label, row.value])}
             />
           </Section>
 
           <Section title="Objetivos">
             <div className="grid gap-3">
-              <div>
-                <p className="mb-2 text-[13px] font-medium text-[#667085]">Meta de lucro</p>
-                <ValuePill value={brl(monthlyProfitGoal)} />
-              </div>
-              <div>
-                <p className="mb-2 text-[13px] font-medium text-[#667085]">Caixa</p>
-                <ValuePill value={brl(cashGoal)} />
-              </div>
-              <div>
-                <p className="mb-2 text-[13px] font-medium text-[#667085]">Compras</p>
-                <ValuePill value={brl(purchaseGoal)} />
-              </div>
+              <ValueField label="Meta de lucro" value={brl(monthlyProfitGoal)} />
+              <ValueField label="Caixa" value={brl(cashGoal)} />
+              <ValueField label="Compras" value={brl(purchaseGoal)} />
             </div>
           </Section>
         </div>
@@ -208,7 +252,8 @@ export default async function ConfiguracoesV2Page() {
             </div>
           }
         >
-          <CompactTable
+          <MobileList rows={fixedCostRows} />
+          <DesktopTable
             headers={["Item", "Valor mensal", "Status"]}
             rows={(fixedCosts ?? []).map((item) => [
               item.descricao,
