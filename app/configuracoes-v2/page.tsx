@@ -26,7 +26,7 @@ function Section({
   return (
     <section className="rounded-[14px] bg-[#f6f7f9] p-4 lg:rounded-[16px] lg:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-[#111827] lg:text-[17px]">
+        <h2 className="text-[16px] font-semibold tracking-[-0.025em] text-[#111827] lg:text-[19px]">
           {title}
         </h2>
         {right}
@@ -50,18 +50,32 @@ function MetricCard({
   return (
     <div
       className={[
-        "rounded-[14px] p-4 lg:p-5",
+        "rounded-[14px] p-4 lg:rounded-[16px] lg:p-5",
         accent ? "bg-[#ff6a2b] text-white" : "bg-[#f6f7f9] text-[#111827]",
       ].join(" ")}
     >
-      <p className={accent ? "text-[12px] text-white/80" : "text-[12px] text-[#667085]"}>
+      <p
+        className={
+          accent
+            ? "text-[14px] font-medium text-white/88 lg:text-[15px]"
+            : "text-[14px] font-medium text-[#667085] lg:text-[15px]"
+        }
+      >
         {label}
       </p>
-      <p className="mt-2 text-[18px] font-semibold tracking-[-0.03em] lg:text-[24px]">
+
+      <p className="mt-3 text-[18px] font-semibold tracking-[-0.03em] lg:text-[24px]">
         {value}
       </p>
+
       {hint ? (
-        <p className={accent ? "mt-1 text-[11px] text-white/80" : "mt-1 text-[11px] text-[#98a2b3]"}>
+        <p
+          className={
+            accent
+              ? "mt-2 text-[11px] text-white/80 lg:text-[12px]"
+              : "mt-2 text-[11px] text-[#98a2b3] lg:text-[12px]"
+          }
+        >
           {hint}
         </p>
       ) : null}
@@ -79,7 +93,7 @@ function ValueField({
   return (
     <div className="space-y-2">
       <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
-      <div className="flex min-h-[40px] items-center rounded-[10px] bg-white px-3 text-[14px] text-[#111827]">
+      <div className="flex min-h-[42px] items-center rounded-[10px] bg-white px-3 text-[14px] text-[#111827] lg:min-h-[44px]">
         {value}
       </div>
     </div>
@@ -126,18 +140,25 @@ function DesktopTable({
             {headers.map((header) => (
               <th
                 key={header}
-                className="px-3 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a2b3]"
+                className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]"
               >
                 {header}
               </th>
             ))}
           </tr>
         </thead>
+
         <tbody>
           {rows.map((row, idx) => (
-            <tr key={idx} className={idx !== rows.length - 1 ? "border-b border-[#f1f4f8]" : ""}>
+            <tr
+              key={idx}
+              className={idx !== rows.length - 1 ? "border-t border-[#f1f4f8]" : "border-t border-[#f1f4f8]"}
+            >
               {row.map((cell, cellIdx) => (
-                <td key={cellIdx} className="px-3 py-3 text-[14px] text-[#111827]">
+                <td
+                  key={cellIdx}
+                  className="px-4 py-4 text-[14px] text-[#111827]"
+                >
                   {cell}
                 </td>
               ))}
@@ -230,7 +251,7 @@ export default async function ConfiguracoesV2Page() {
           />
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
           <Section title="Padrões de precificação">
             <MobileList rows={pricingRows} />
             <DesktopTable
