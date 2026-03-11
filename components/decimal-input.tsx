@@ -9,28 +9,6 @@ type DecimalInputProps = {
   placeholder?: string;
 };
 
-function normalizeInitialValue(value: string) {
-  if (!value) return "";
-
-  const normalized = value.replace(/\./g, ",");
-  let result = "";
-  let hasComma = false;
-
-  for (const char of normalized) {
-    if (/\d/.test(char)) {
-      result += char;
-      continue;
-    }
-
-    if (char === "," && !hasComma) {
-      result += char;
-      hasComma = true;
-    }
-  }
-
-  return result;
-}
-
 function sanitizeDecimalInput(value: string) {
   const normalized = value.replace(/\./g, ",");
   let result = "";
@@ -51,15 +29,41 @@ function sanitizeDecimalInput(value: string) {
   return result;
 }
 
+function formatPtBrDecimal(value: string) {
+  if (!value) return "";
+
+  const [rawInteger = "", rawDecimal = ""] = value.split(",");
+  const integerOnly = rawInteger.replace(/\D/g, "") || "0";
+  const decimalOnly = rawDecimal.replace(/\D/g, "").slice(0, 2);
+
+  const integerFormatted = Number(integerOnly).toLocaleString("pt-BR");
+
+  return `${integerFormatted},${decimalOnly.padEnd(2, "0")}`;
+}
+
+function normalizeInitialValue(value: string) {
+  if (!value) return "";
+
+  const sanitized = sanitizeDecimalInput(value);
+  if (!sanitized) return "";
+
+  return sanitized;
+}
+
 export default function DecimalInput({
   name,
   defaultValue = "",
   className = "",
   placeholder = "0,00",
 }: DecimalInputProps) {
-  const [value, setValue] = useState(() => normalizeInitialValue(defaultValue));
+  const [rawValue, setRawValue] = useState(() =>
+    normalizeInitialValue(defaultValue)
+  );
 
-  const displayValue = useMemo(() => value, [value]);
+  const displayValue = useMemo(
+    () => formatPtBrDecimal(rawValue),
+    [rawValue]
+  );
 
   return (
     <input
@@ -71,7 +75,7 @@ export default function DecimalInput({
       value={displayValue}
       placeholder={placeholder}
       onChange={(e) => {
-        setValue(sanitizeDecimalInput(e.target.value));
+        setRawValue(sanitizeDecimalInput(e.target.value));
       }}
       className={className}
     />
