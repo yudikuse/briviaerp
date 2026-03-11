@@ -1,5 +1,7 @@
 import { revalidatePath } from "next/cache";
+import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
+import DecimalInput from "@/components/decimal-input";
 import MoneyInput from "@/components/money-input";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -32,10 +34,14 @@ function parseMoneyInput(value: FormDataEntryValue | null) {
 function parseDecimalInput(value: FormDataEntryValue | null) {
   if (!value) return 0;
 
-  const raw = String(value).trim().replace(",", ".");
-  const cleaned = raw.replace(/[^0-9.]/g, "");
-  const parsed = Number(cleaned);
+  const cleaned = String(value)
+    .trim()
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".")
+    .replace(/[^0-9.]/g, "");
 
+  const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -48,7 +54,7 @@ function moneyDefault(value: number | null | undefined) {
 }
 
 function decimalDefault(value: number | null | undefined) {
-  if (!value && value !== 0) return "";
+  if (value === null || value === undefined) return "";
   return String(value).replace(".", ",");
 }
 
@@ -71,6 +77,7 @@ async function updateGoals(formData: FormData) {
     .eq("id", 1);
 
   revalidatePath("/configuracoes-v2");
+  revalidatePath("/configuracoes");
 }
 
 async function updatePricing(formData: FormData) {
@@ -101,6 +108,7 @@ async function updatePricing(formData: FormData) {
     .eq("id", 1);
 
   revalidatePath("/configuracoes-v2");
+  revalidatePath("/configuracoes");
 }
 
 function Section({
@@ -109,8 +117,8 @@ function Section({
   children,
 }: {
   title: string;
-  right?: React.ReactNode;
-  children: React.ReactNode;
+  right?: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="rounded-[14px] bg-[#f6f7f9] p-4 lg:rounded-[16px] lg:p-5">
@@ -172,40 +180,20 @@ function MetricCard({
   );
 }
 
-function ValueField({
+function FieldBlock({
   label,
-  value,
+  children,
 }: {
   label: string;
-  value: string;
+  children: ReactNode;
 }) {
   return (
     <div className="space-y-2">
       <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
         {label}
       </p>
-      <div className="flex min-h-[42px] items-center rounded-[10px] bg-white px-3 text-[14px] text-[#111827] lg:min-h-[44px]">
-        {value}
-      </div>
+      {children}
     </div>
-  );
-}
-
-function DecimalTextInput({
-  name,
-  defaultValue,
-}: {
-  name: string;
-  defaultValue: string;
-}) {
-  return (
-    <input
-      name={name}
-      type="text"
-      inputMode="decimal"
-      defaultValue={defaultValue}
-      className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
-    />
   );
 }
 
@@ -273,6 +261,9 @@ function DesktopTable({
   );
 }
 
+const inputBaseClass =
+  "h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[44px]";
+
 export default async function ConfiguracoesV2Page() {
   const [{ data: settings }, { data: fixedCosts }] = await Promise.all([
     supabaseAdmin.from("general_settings").select("*").eq("id", 1).single(),
@@ -301,41 +292,6 @@ export default async function ConfiguracoesV2Page() {
   const requiredRevenue =
     marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
 
-  const pricingRows = [
-    {
-      label: "Markup (x)",
-      value: String(settings?.default_markup_x ?? 0).replace(".", ","),
-    },
-    {
-      label: "Margem alvo (%)",
-      value: pct(Number(settings?.default_target_margin_pct ?? 0)),
-    },
-    {
-      label: "Impostos (%)",
-      value: pct(Number(settings?.default_taxes_pct ?? 0)),
-    },
-    {
-      label: "Taxa cartão (%)",
-      value: pct(Number(settings?.default_card_fee_pct ?? 0)),
-    },
-    {
-      label: "Marketing (%)",
-      value: pct(Number(settings?.default_marketing_pct ?? 0)),
-    },
-    {
-      label: "Outras deduções (%)",
-      value: pct(Number(settings?.default_other_deductions_pct ?? 0)),
-    },
-    {
-      label: "Embalagem",
-      value: brl(Number(settings?.default_packaging_rs ?? 0)),
-    },
-    {
-      label: "Despesa por peça",
-      value: brl(Number(settings?.default_piece_expense_rs ?? 0)),
-    },
-  ];
-
   const fixedCostRows = (fixedCosts ?? []).map((item) => ({
     label: item.descricao,
     value: `${brl(Number(item.valor_mensal ?? 0))} • ${
@@ -363,70 +319,68 @@ export default async function ConfiguracoesV2Page() {
         <div className="grid items-start gap-4 xl:grid-cols-[1.08fr_0.92fr]">
           <Section title="Padrões de precificação">
             <form action={updatePricing} className="space-y-4">
-              <div className="grid gap-3 lg:hidden">
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Markup (x)</p>
-                  <DecimalTextInput
+              <div className="grid gap-3 md:grid-cols-2">
+                <FieldBlock label="Markup (x)">
+                  <DecimalInput
                     name="default_markup_x"
                     defaultValue={decimalDefault(settings?.default_markup_x)}
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Margem alvo (%)</p>
-                  <DecimalTextInput
+                <FieldBlock label="Margem alvo (%)">
+                  <DecimalInput
                     name="default_target_margin_pct"
                     defaultValue={decimalDefault(settings?.default_target_margin_pct)}
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Impostos (%)</p>
-                  <DecimalTextInput
+                <FieldBlock label="Impostos (%)">
+                  <DecimalInput
                     name="default_taxes_pct"
                     defaultValue={decimalDefault(settings?.default_taxes_pct)}
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Taxa cartão (%)</p>
-                  <DecimalTextInput
+                <FieldBlock label="Taxa cartão (%)">
+                  <DecimalInput
                     name="default_card_fee_pct"
                     defaultValue={decimalDefault(settings?.default_card_fee_pct)}
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Marketing (%)</p>
-                  <DecimalTextInput
+                <FieldBlock label="Marketing (%)">
+                  <DecimalInput
                     name="default_marketing_pct"
                     defaultValue={decimalDefault(settings?.default_marketing_pct)}
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Outras deduções (%)</p>
-                  <DecimalTextInput
+                <FieldBlock label="Outras deduções (%)">
+                  <DecimalInput
                     name="default_other_deductions_pct"
                     defaultValue={decimalDefault(
                       settings?.default_other_deductions_pct
                     )}
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Embalagem</p>
+                <FieldBlock label="Embalagem">
                   <MoneyInput
                     name="default_packaging_rs"
                     defaultValue={moneyDefault(settings?.default_packaging_rs)}
                     prefix="R$"
                     wrapperClassName="w-full"
-                    className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none"
+                    className={inputBaseClass}
                   />
-                </div>
+                </FieldBlock>
 
-                <div className="space-y-2">
-                  <p className="text-[12px] font-medium text-[#667085]">Despesa por peça</p>
+                <FieldBlock label="Despesa por peça">
                   <MoneyInput
                     name="default_piece_expense_rs"
                     defaultValue={moneyDefault(
@@ -434,124 +388,9 @@ export default async function ConfiguracoesV2Page() {
                     )}
                     prefix="R$"
                     wrapperClassName="w-full"
-                    className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none"
+                    className={inputBaseClass}
                   />
-                </div>
-              </div>
-
-              <div className="hidden overflow-hidden rounded-[12px] bg-white lg:block">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">
-                        Campo
-                      </th>
-                      <th className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">
-                        Valor
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Markup (x)</td>
-                      <td className="px-4 py-3">
-                        <DecimalTextInput
-                          name="default_markup_x"
-                          defaultValue={decimalDefault(settings?.default_markup_x)}
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Margem alvo (%)</td>
-                      <td className="px-4 py-3">
-                        <DecimalTextInput
-                          name="default_target_margin_pct"
-                          defaultValue={decimalDefault(
-                            settings?.default_target_margin_pct
-                          )}
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Impostos (%)</td>
-                      <td className="px-4 py-3">
-                        <DecimalTextInput
-                          name="default_taxes_pct"
-                          defaultValue={decimalDefault(settings?.default_taxes_pct)}
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Taxa cartão (%)</td>
-                      <td className="px-4 py-3">
-                        <DecimalTextInput
-                          name="default_card_fee_pct"
-                          defaultValue={decimalDefault(
-                            settings?.default_card_fee_pct
-                          )}
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Marketing (%)</td>
-                      <td className="px-4 py-3">
-                        <DecimalTextInput
-                          name="default_marketing_pct"
-                          defaultValue={decimalDefault(
-                            settings?.default_marketing_pct
-                          )}
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Outras deduções (%)</td>
-                      <td className="px-4 py-3">
-                        <DecimalTextInput
-                          name="default_other_deductions_pct"
-                          defaultValue={decimalDefault(
-                            settings?.default_other_deductions_pct
-                          )}
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Embalagem</td>
-                      <td className="px-4 py-3">
-                        <MoneyInput
-                          name="default_packaging_rs"
-                          defaultValue={moneyDefault(
-                            settings?.default_packaging_rs
-                          )}
-                          prefix="R$"
-                          wrapperClassName="w-full"
-                          className="h-[44px] w-full rounded-[10px] bg-[#f8fafc] px-3 text-[14px] text-[#111827] outline-none"
-                        />
-                      </td>
-                    </tr>
-
-                    <tr className="border-t border-[#f1f4f8]">
-                      <td className="px-4 py-3 text-[14px] text-[#111827]">Despesa por peça</td>
-                      <td className="px-4 py-3">
-                        <MoneyInput
-                          name="default_piece_expense_rs"
-                          defaultValue={moneyDefault(
-                            settings?.default_piece_expense_rs
-                          )}
-                          prefix="R$"
-                          wrapperClassName="w-full"
-                          className="h-[44px] w-full rounded-[10px] bg-[#f8fafc] px-3 text-[14px] text-[#111827] outline-none"
-                        />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                </FieldBlock>
               </div>
 
               <div className="pt-1">
@@ -567,44 +406,35 @@ export default async function ConfiguracoesV2Page() {
 
           <Section title="Objetivos">
             <form action={updateGoals} className="grid gap-3">
-              <div className="space-y-2">
-                <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
-                  Meta de lucro
-                </p>
+              <FieldBlock label="Meta de lucro">
                 <MoneyInput
                   name="monthly_profit_goal_rs"
                   defaultValue={moneyDefault(monthlyProfitGoal)}
                   prefix="R$"
                   wrapperClassName="w-full"
-                  className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+                  className={inputBaseClass}
                 />
-              </div>
+              </FieldBlock>
 
-              <div className="space-y-2">
-                <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
-                  Caixa
-                </p>
+              <FieldBlock label="Caixa">
                 <MoneyInput
                   name="cash_goal_rs"
                   defaultValue={moneyDefault(cashGoal)}
                   prefix="R$"
                   wrapperClassName="w-full"
-                  className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+                  className={inputBaseClass}
                 />
-              </div>
+              </FieldBlock>
 
-              <div className="space-y-2">
-                <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
-                  Compras
-                </p>
+              <FieldBlock label="Compras">
                 <MoneyInput
                   name="purchase_goal_rs"
                   defaultValue={moneyDefault(purchaseGoal)}
                   prefix="R$"
                   wrapperClassName="w-full"
-                  className="h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none lg:h-[44px]"
+                  className={inputBaseClass}
                 />
-              </div>
+              </FieldBlock>
 
               <div className="pt-1">
                 <button
