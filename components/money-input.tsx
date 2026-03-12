@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type MoneyInputProps = {
   name: string;
@@ -11,25 +11,55 @@ type MoneyInputProps = {
   prefix?: string;
 };
 
-function onlyDigits(value: string) {
-  return value.replace(/\D/g, "");
+/**
+ * Converts the pt-BR formatted defaultValue (e.g. "1.234,56" or "1,40")
+ * into a raw digits string used internally (e.g. "123456" or "140").
+ *
+ * Rules:
+ *  - Remove thousand-separators (dots before the last comma)
+ *  - Remove the comma
+ *  - Result is cents as integer string: "1,40" → "140", "1.234,56" → "123456"
+ */
+function initialDigits(defaultValue: string): string {
+  if (!defaultValue) return "";
+
+  const trimmed = defaultValue.trim();
+  if (!trimmed) return "";
+
+  // Find last comma — that's the decimal separator in pt-BR
+  const lastComma = trimmed.lastIndexOf(",");
+
+  let intPart: string;
+  let decPart: string;
+
+  if (lastComma === -1) {
+    // No comma at all — treat as whole number with 00 cents
+    intPart = trimmed;
+    decPart = "00";
+  } else {
+    intPart = trimmed.slice(0, lastComma);
+    decPart = trimmed.slice(lastComma + 1);
+  }
+
+  // Strip dots (thousand separators) and non-digits from integer part
+  const cleanInt = intPart.replace(/\D/g, "");
+  // Pad/trim decimal part to exactly 2 digits
+  const cleanDec = decPart.replace(/\D/g, "").slice(0, 2).padEnd(2, "0");
+
+  const digits = cleanInt + cleanDec;
+
+  // Drop leading zeros but keep at least one digit
+  const trimmed2 = digits.replace(/^0+/, "") || "";
+  return trimmed2;
 }
 
-function formatDigitsToBrl(digits: string) {
+function digitsToDisplay(digits: string): string {
   if (!digits) return "";
-
   const value = Number(digits) / 100;
-
   return value.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-}
-
-function normalizeInitialValue(value: string) {
-  const digits = onlyDigits(value);
-  if (!digits || Number(digits) === 0) return "";
-  return digits;
 }
 
 export default function MoneyInput({
@@ -40,9 +70,16 @@ export default function MoneyInput({
   placeholder = "0,00",
   prefix,
 }: MoneyInputProps) {
-  const [digits, setDigits] = useState(() => normalizeInitialValue(defaultValue));
+  const [digits, setDigits] = useState(() => initialDigits(defaultValue));
 
-  const formattedValue = useMemo(() => formatDigitsToBrl(digits), [digits]);
+  const displayValue = digitsToDisplay(digits);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const onlyNums = e.target.value.replace(/\D/g, "");
+    // Drop leading zeros
+    const trimmed = onlyNums.replace(/^0+/, "");
+    setDigits(trimmed);
+  }
 
   return (
     <div className={`relative ${wrapperClassName}`}>
@@ -59,10 +96,8 @@ export default function MoneyInput({
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
-        value={formattedValue}
-        onChange={(e) => {
-          setDigits(onlyDigits(e.target.value));
-        }}
+        value={displayValue}
+        onChange={handleChange}
         className={`${className} ${prefix ? "pl-10" : ""}`}
       />
     </div>
