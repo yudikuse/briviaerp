@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { PricingForm, GoalsForm } from "./_forms";
+import { PricingForm, GoalsForm, FixedCostsList } from "./_forms";
 
 export const dynamic = "force-dynamic";
 
@@ -71,56 +71,6 @@ function MetricCard({
   );
 }
 
-function MobileList({ rows }: { rows: { label: string; value: string }[] }) {
-  return (
-    <div className="overflow-hidden rounded-[12px] bg-white lg:hidden">
-      {rows.map((row, idx) => (
-        <div
-          key={row.label}
-          className={[
-            "flex items-start justify-between gap-4 px-4 py-3",
-            idx !== rows.length - 1 ? "border-b border-[#edf0f4]" : "",
-          ].join(" ")}
-        >
-          <div className="text-[14px] text-[#111827]">{row.label}</div>
-          <div className="shrink-0 text-right text-[14px] font-medium text-[#111827]">
-            {row.value}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function DesktopTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
-  return (
-    <div className="hidden overflow-hidden rounded-[12px] bg-white lg:block">
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            {headers.map((header) => (
-              <th key={header} className="px-4 py-4 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#98a2b3]">
-                {header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, idx) => (
-            <tr key={idx} className="border-t border-[#f1f4f8]">
-              {row.map((cell, cellIdx) => (
-                <td key={cellIdx} className="px-4 py-4 text-[14px] text-[#111827]">
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export default async function ConfiguracoesV2Page() {
   const [{ data: settings }, { data: fixedCosts }] = await Promise.all([
     supabaseAdmin.from("general_settings").select("*").eq("id", 1).single(),
@@ -146,9 +96,18 @@ export default async function ConfiguracoesV2Page() {
 
   const requiredRevenue = marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
 
+  const fixedCostItems = (fixedCosts ?? []).map((item) => ({
+    id: item.id,
+    descricao: item.descricao,
+    valor_mensal: Number(item.valor_mensal ?? 0),
+    ativo: item.ativo,
+    ordem: item.ordem,
+  }));
+
   return (
     <AppShell title="Configurações" subtitle="">
       <div className="space-y-4 lg:space-y-5">
+        {/* ── metric cards ── */}
         <div className="grid gap-3 md:grid-cols-3">
           <MetricCard label="Custos fixos" value={brl(totalFixedCosts)} />
           <MetricCard label="Meta operacional" value={brl(operationalGoal)} accent />
@@ -160,9 +119,12 @@ export default async function ConfiguracoesV2Page() {
         </div>
 
         <div className="grid items-start gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+          {/* ── pricing defaults ── */}
           <Section title="Padrões de precificação">
             <PricingForm settings={settings} />
           </Section>
+
+          {/* ── goals ── */}
           <Section title="Objetivos">
             <GoalsForm
               monthlyProfitGoal={monthlyProfitGoal}
@@ -172,28 +134,16 @@ export default async function ConfiguracoesV2Page() {
           </Section>
         </div>
 
+        {/* ── fixed costs ── */}
         <Section
           title="Custos fixos"
           right={
             <div className="rounded-full bg-white px-3 py-1 text-[12px] font-medium text-[#667085]">
-              {fixedCosts?.length ?? 0} itens
+              {fixedCostItems.length} itens
             </div>
           }
         >
-          <MobileList
-            rows={(fixedCosts ?? []).map((item) => ({
-              label: item.descricao,
-              value: `${brl(Number(item.valor_mensal ?? 0))} • ${item.ativo ? "Ativo" : "Inativo"}`,
-            }))}
-          />
-          <DesktopTable
-            headers={["Item", "Valor mensal", "Status"]}
-            rows={(fixedCosts ?? []).map((item) => [
-              item.descricao,
-              brl(Number(item.valor_mensal ?? 0)),
-              item.ativo ? "Ativo" : "Inativo",
-            ])}
-          />
+          <FixedCostsList items={fixedCostItems} />
         </Section>
       </div>
     </AppShell>
