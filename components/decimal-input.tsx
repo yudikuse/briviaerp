@@ -47,7 +47,9 @@ export default function DecimalInput({
       value={value}
       placeholder={placeholder}
       onChange={handleChange}
+      maxLength={9}
       className={className}
     />
   );
 }
+
