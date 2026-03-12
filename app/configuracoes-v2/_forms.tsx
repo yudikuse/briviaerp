@@ -29,7 +29,6 @@ type Settings = {
   default_piece_expense_rs?: number | null;
 };
 
-/** 3 → "3,00" | 0 ou null → "" */
 function decimalDefault(value: number | null | undefined): string {
   if (value === null || value === undefined || Number(value) === 0) return "";
   return Number(value).toLocaleString("pt-BR", {
@@ -38,7 +37,6 @@ function decimalDefault(value: number | null | undefined): string {
   });
 }
 
-/** 21312.32 → "21.312,32" | 0 ou null → "" */
 function moneyDefault(value: number | null | undefined): string {
   if (!value || Number(value) === 0) return "";
   return Number(value).toLocaleString("pt-BR", {
@@ -53,7 +51,9 @@ export function PricingForm({ settings }: { settings: Settings | null }) {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    startTransition(() => { updatePricing(formData); });
+    startTransition(() => {
+      updatePricing(formData);
+    });
   }
 
   return (
@@ -155,7 +155,9 @@ export function GoalsForm({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    startTransition(() => { updateGoals(formData); });
+    startTransition(() => {
+      updateGoals(formData);
+    });
   }
 
   return (
