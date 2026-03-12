@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type DecimalInputProps = {
   name: string;
@@ -9,61 +9,40 @@ type DecimalInputProps = {
   placeholder?: string;
 };
 
-function sanitizeDecimalInput(value: string) {
-  const normalized = value.replace(/\./g, ",");
-  let result = "";
-  let hasComma = false;
-
-  for (const char of normalized) {
-    if (/\d/.test(char)) {
-      result += char;
-      continue;
-    }
-
-    if (char === "," && !hasComma) {
-      result += char;
-      hasComma = true;
-    }
-  }
-
-  return result;
-}
-
-function formatPtBrDecimal(value: string) {
-  if (!value) return "";
-
-  const [rawInteger = "", rawDecimal = ""] = value.split(",");
-  const integerOnly = rawInteger.replace(/\D/g, "") || "0";
-  const decimalOnly = rawDecimal.replace(/\D/g, "").slice(0, 2);
-
-  const integerFormatted = Number(integerOnly).toLocaleString("pt-BR");
-
-  return `${integerFormatted},${decimalOnly.padEnd(2, "0")}`;
-}
-
-function normalizeInitialValue(value: string) {
-  if (!value) return "";
-
-  const sanitized = sanitizeDecimalInput(value);
-  if (!sanitized) return "";
-
-  return sanitized;
-}
-
+/**
+ * Keeps only digits and ONE comma. Does NOT reformat while typing —
+ * the user types freely and we just block invalid characters.
+ * The server action receives e.g. "3,00" and converts with parseDecimalInput.
+ */
 export default function DecimalInput({
   name,
   defaultValue = "",
   className = "",
   placeholder = "0,00",
 }: DecimalInputProps) {
-  const [rawValue, setRawValue] = useState(() =>
-    normalizeInitialValue(defaultValue)
-  );
+  const [value, setValue] = useState(defaultValue);
 
-  const displayValue = useMemo(
-    () => formatPtBrDecimal(rawValue),
-    [rawValue]
-  );
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value;
+
+    // Allow digits and at most one comma; also allow single dot → convert to comma
+    let filtered = raw
+      .replace(/\./g, ",")       // convert dots to commas
+      .replace(/[^0-9,]/g, "");  // strip everything else
+
+    // Keep only first comma
+    const parts = filtered.split(",");
+    if (parts.length > 2) {
+      filtered = parts[0] + "," + parts.slice(1).join("");
+    }
+
+    // Limit decimal part to 2 digits
+    if (parts.length === 2) {
+      filtered = parts[0] + "," + parts[1].slice(0, 2);
+    }
+
+    setValue(filtered);
+  }
 
   return (
     <input
@@ -72,11 +51,9 @@ export default function DecimalInput({
       inputMode="decimal"
       autoComplete="off"
       spellCheck={false}
-      value={displayValue}
+      value={value}
       placeholder={placeholder}
-      onChange={(e) => {
-        setRawValue(sanitizeDecimalInput(e.target.value));
-      }}
+      onChange={handleChange}
       className={className}
     />
   );
