@@ -52,12 +52,11 @@ function moneyDefault(value: number | null | undefined): string {
   });
 }
 
-function nowTime() {
-  return new Date().toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+function nowDateTime() {
+  const now = new Date();
+  const date = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const time = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return `${date} ${time}`;
 }
 
 // ─── PricingForm ───────────────────────────────────────────────────────────────
@@ -82,7 +81,7 @@ export function PricingForm({ settings }: { settings: Settings | null }) {
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       await updatePricing(formData);
-      setSavedAt(nowTime());
+      setSavedAt(nowDateTime());
     });
   }
 
@@ -191,7 +190,7 @@ export function GoalsForm({
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
       await updateGoals(formData);
-      setSavedAt(nowTime());
+      setSavedAt(nowDateTime());
     });
   }
 
@@ -379,7 +378,7 @@ function AddFixedCostForm() {
     const formData = new FormData(form);
     startTransition(async () => {
       await addFixedCost(formData);
-      setSavedAt(nowTime());
+      setSavedAt(nowDateTime());
       form.reset();
       setOpen(false);
     });
