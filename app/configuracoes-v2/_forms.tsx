@@ -7,18 +7,10 @@ import MoneyInput from "@/components/money-input";
 const inputBaseClass =
   "h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[44px]";
 
-function FieldBlock({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function FieldBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
-        {label}
-      </p>
+      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
       {children}
     </div>
   );
@@ -35,12 +27,17 @@ type Settings = {
   default_piece_expense_rs?: number | null;
 };
 
-function decimalDefault(value: number | null | undefined) {
-  if (value === null || value === undefined) return "";
-  return String(value).replace(".", ",");
+/** 3 → "3,00" | 0 ou null → "" (campo vazio, mostra placeholder) */
+function decimalDefault(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number(value) === 0) return "";
+  return Number(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
-function moneyDefault(value: number | null | undefined) {
+/** 21312.32 → "21.312,32" | 0 ou null → "" */
+function moneyDefault(value: number | null | undefined): string {
   if (!value || Number(value) === 0) return "";
   return Number(value).toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
