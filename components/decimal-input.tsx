@@ -9,11 +9,16 @@ type DecimalInputProps = {
   placeholder?: string;
 };
 
-/** "3,00" → "300", "6,54" → "654" */
+/**
+ * Converte string pt-BR para centavos inteiros.
+ * "3,00" → "300", "6,54" → "654", "3,0" → "300", "3" → "300"
+ */
 function defaultToDigits(value: string): string {
   if (!value) return "";
-  const clean = value.replace(/\./g, "").replace(",", "");
-  return clean.replace(/^0+/, "") || "";
+  const normalized = value.replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(normalized);
+  if (!isFinite(num) || num === 0) return "";
+  return String(Math.round(num * 100));
 }
 
 /** "654" → "6,54", "300" → "3,00", "" → "" */
