@@ -58,3 +58,68 @@ export async function updatePricing(formData: FormData) {
   revalidatePath("/configuracoes-v2");
   revalidatePath("/configuracoes");
 }
+
+export async function addFixedCost(formData: FormData) {
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  const valor_mensal = parseMoneyInput(formData.get("valor_mensal"));
+  if (!descricao) return;
+
+  // get max ordem
+  const { data } = await supabaseAdmin
+    .from("fixed_costs")
+    .select("ordem")
+    .order("ordem", { ascending: false })
+    .limit(1)
+    .single();
+
+  const ordem = (data?.ordem ?? 0) + 1;
+
+  await supabaseAdmin.from("fixed_costs").insert({
+    descricao,
+    valor_mensal,
+    ativo: true,
+    ordem,
+  });
+
+  revalidatePath("/configuracoes-v2");
+  revalidatePath("/configuracoes");
+}
+
+export async function updateFixedCost(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  const valor_mensal = parseMoneyInput(formData.get("valor_mensal"));
+  if (!id || !descricao) return;
+
+  await supabaseAdmin
+    .from("fixed_costs")
+    .update({ descricao, valor_mensal })
+    .eq("id", id);
+
+  revalidatePath("/configuracoes-v2");
+  revalidatePath("/configuracoes");
+}
+
+export async function toggleFixedCost(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  const ativo = formData.get("ativo") === "true";
+  if (!id) return;
+
+  await supabaseAdmin
+    .from("fixed_costs")
+    .update({ ativo: !ativo })
+    .eq("id", id);
+
+  revalidatePath("/configuracoes-v2");
+  revalidatePath("/configuracoes");
+}
+
+export async function deleteFixedCost(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+
+  await supabaseAdmin.from("fixed_costs").delete().eq("id", id);
+
+  revalidatePath("/configuracoes-v2");
+  revalidatePath("/configuracoes");
+}
