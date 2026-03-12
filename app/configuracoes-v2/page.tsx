@@ -1,11 +1,14 @@
+"use client";
+
 import { revalidatePath } from "next/cache";
-import type { ReactNode } from "react";
+import type { ReactNode, ChangeEvent } from "react";
+import { useState, useCallback } from "react";
 import { AppShell } from "@/components/app-shell";
-import DecimalInput from "@/components/decimal-input";
-import MoneyInput from "@/components/money-input";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
+
+// ─── formatters ────────────────────────────────────────────────────────────────
 
 function brl(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -18,29 +21,27 @@ function pct(value: number) {
   return `${(value || 0).toFixed(2).replace(".", ",")}%`;
 }
 
+// ─── parsers ───────────────────────────────────────────────────────────────────
+
 function parseMoneyInput(value: FormDataEntryValue | null) {
   if (!value) return 0;
-
   const cleaned = String(value)
     .trim()
     .replace(/\s/g, "")
     .replace(/\./g, "")
     .replace(",", ".");
-
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function parseDecimalInput(value: FormDataEntryValue | null) {
   if (!value) return 0;
-
   const cleaned = String(value)
     .trim()
     .replace(/\s/g, "")
     .replace(/\./g, "")
     .replace(",", ".")
     .replace(/[^0-9.]/g, "");
-
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -58,12 +59,12 @@ function decimalDefault(value: number | null | undefined) {
   return String(value).replace(".", ",");
 }
 
+// ─── server actions ────────────────────────────────────────────────────────────
+
 async function updateGoals(formData: FormData) {
   "use server";
 
-  const monthlyProfitGoal = parseMoneyInput(
-    formData.get("monthly_profit_goal_rs")
-  );
+  const monthlyProfitGoal = parseMoneyInput(formData.get("monthly_profit_goal_rs"));
   const cashGoal = parseMoneyInput(formData.get("cash_goal_rs"));
   const purchaseGoal = parseMoneyInput(formData.get("purchase_goal_rs"));
 
@@ -87,29 +88,102 @@ async function updatePricing(formData: FormData) {
     .from("general_settings")
     .update({
       default_markup_x: parseDecimalInput(formData.get("default_markup_x")),
-      default_target_margin_pct: parseDecimalInput(
-        formData.get("default_target_margin_pct")
-      ),
+      default_target_margin_pct: parseDecimalInput(formData.get("default_target_margin_pct")),
       default_taxes_pct: parseDecimalInput(formData.get("default_taxes_pct")),
-      default_card_fee_pct: parseDecimalInput(
-        formData.get("default_card_fee_pct")
-      ),
-      default_marketing_pct: parseDecimalInput(
-        formData.get("default_marketing_pct")
-      ),
-      default_other_deductions_pct: parseDecimalInput(
-        formData.get("default_other_deductions_pct")
-      ),
+      default_card_fee_pct: parseDecimalInput(formData.get("default_card_fee_pct")),
+      default_marketing_pct: parseDecimalInput(formData.get("default_marketing_pct")),
+      default_other_deductions_pct: parseDecimalInput(formData.get("default_other_deductions_pct")),
       default_packaging_rs: parseMoneyInput(formData.get("default_packaging_rs")),
-      default_piece_expense_rs: parseMoneyInput(
-        formData.get("default_piece_expense_rs")
-      ),
+      default_piece_expense_rs: parseMoneyInput(formData.get("default_piece_expense_rs")),
     })
     .eq("id", 1);
 
   revalidatePath("/configuracoes-v2");
   revalidatePath("/configuracoes");
 }
+
+// ─── inline masked inputs (client components) ─────────────────────────────────
+
+/**
+ * Decimal input – accepts digits and one comma as separator.
+ * Stored value uses comma (pt-BR), server action strips and converts.
+ */
+function DecimalField({
+  name,
+  defaultValue,
+  className,
+}: {
+  name: string;
+  defaultValue: string;
+  className?: string;
+}) {
+  const [val, setVal] = useState(defaultValue);
+
+  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value;
+    // allow only digits and one comma
+    raw = raw.replace(/[^0-9,]/g, "");
+    // only one comma
+    const parts = raw.split(",");
+    if (parts.length > 2) raw = parts[0] + "," + parts.slice(1).join("");
+    setVal(raw);
+  }, []);
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      name={name}
+      value={val}
+      onChange={handleChange}
+      className={className}
+      autoComplete="off"
+    />
+  );
+}
+
+/**
+ * Money input – formats as pt-BR currency (1.234,56).
+ * Prefix "R$" is rendered outside; the hidden input carries the raw value.
+ */
+function MoneyField({
+  name,
+  defaultValue,
+  className,
+}: {
+  name: string;
+  defaultValue: string;
+  className?: string;
+}) {
+  const [val, setVal] = useState(defaultValue);
+
+  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    // strip everything except digits and comma
+    let raw = e.target.value.replace(/[^0-9,]/g, "");
+    const parts = raw.split(",");
+    if (parts.length > 2) raw = parts[0] + "," + parts.slice(1).join("");
+    setVal(raw);
+  }, []);
+
+  return (
+    <div className="relative flex w-full items-center">
+      <span className="absolute left-3 select-none text-[14px] text-[#667085]">
+        R$
+      </span>
+      <input
+        type="text"
+        inputMode="decimal"
+        name={name}
+        value={val}
+        onChange={handleChange}
+        className={[className, "pl-9"].join(" ")}
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
+// ─── layout primitives ─────────────────────────────────────────────────────────
 
 function Section({
   title,
@@ -160,11 +234,9 @@ function MetricCard({
       >
         {label}
       </p>
-
       <p className="mt-3 text-[18px] font-semibold tracking-[-0.03em] lg:text-[24px]">
         {value}
       </p>
-
       {hint ? (
         <p
           className={
@@ -189,19 +261,13 @@ function FieldBlock({
 }) {
   return (
     <div className="space-y-2">
-      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">
-        {label}
-      </p>
+      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
       {children}
     </div>
   );
 }
 
-function MobileList({
-  rows,
-}: {
-  rows: { label: string; value: string }[];
-}) {
+function MobileList({ rows }: { rows: { label: string; value: string }[] }) {
   return (
     <div className="overflow-hidden rounded-[12px] bg-white lg:hidden">
       {rows.map((row, idx) => (
@@ -244,7 +310,6 @@ function DesktopTable({
             ))}
           </tr>
         </thead>
-
         <tbody>
           {rows.map((row, idx) => (
             <tr key={idx} className="border-t border-[#f1f4f8]">
@@ -264,6 +329,8 @@ function DesktopTable({
 const inputBaseClass =
   "h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[44px]";
 
+// ─── page ──────────────────────────────────────────────────────────────────────
+
 export default async function ConfiguracoesV2Page() {
   const [{ data: settings }, { data: fixedCosts }] = await Promise.all([
     supabaseAdmin.from("general_settings").select("*").eq("id", 1).single(),
@@ -281,34 +348,27 @@ export default async function ConfiguracoesV2Page() {
   const cashGoal = Number(settings?.cash_goal_rs ?? 0);
   const purchaseGoal = Number(settings?.purchase_goal_rs ?? 0);
 
-  const operationalGoal =
-    totalFixedCosts + monthlyProfitGoal + cashGoal + purchaseGoal;
+  const operationalGoal = totalFixedCosts + monthlyProfitGoal + cashGoal + purchaseGoal;
 
   const marginBase =
     Number(settings?.minimum_target_margin_pct ?? 0) > 0
       ? Number(settings?.minimum_target_margin_pct ?? 0)
       : Number(settings?.default_target_margin_pct ?? 0);
 
-  const requiredRevenue =
-    marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
+  const requiredRevenue = marginBase > 0 ? operationalGoal / (marginBase / 100) : 0;
 
   const fixedCostRows = (fixedCosts ?? []).map((item) => ({
     label: item.descricao,
-    value: `${brl(Number(item.valor_mensal ?? 0))} • ${
-      item.ativo ? "Ativo" : "Inativo"
-    }`,
+    value: `${brl(Number(item.valor_mensal ?? 0))} • ${item.ativo ? "Ativo" : "Inativo"}`,
   }));
 
   return (
     <AppShell title="Configurações" subtitle="">
       <div className="space-y-4 lg:space-y-5">
+        {/* ── metric cards ── */}
         <div className="grid gap-3 md:grid-cols-3">
           <MetricCard label="Custos fixos" value={brl(totalFixedCosts)} />
-          <MetricCard
-            label="Meta operacional"
-            value={brl(operationalGoal)}
-            accent
-          />
+          <MetricCard label="Meta operacional" value={brl(operationalGoal)} accent />
           <MetricCard
             label="Faturamento necessário"
             value={brl(requiredRevenue)}
@@ -317,11 +377,12 @@ export default async function ConfiguracoesV2Page() {
         </div>
 
         <div className="grid items-start gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+          {/* ── pricing defaults ── */}
           <Section title="Padrões de precificação">
             <form action={updatePricing} className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <FieldBlock label="Markup (x)">
-                  <DecimalInput
+                  <DecimalField
                     name="default_markup_x"
                     defaultValue={decimalDefault(settings?.default_markup_x)}
                     className={inputBaseClass}
@@ -329,7 +390,7 @@ export default async function ConfiguracoesV2Page() {
                 </FieldBlock>
 
                 <FieldBlock label="Margem alvo (%)">
-                  <DecimalInput
+                  <DecimalField
                     name="default_target_margin_pct"
                     defaultValue={decimalDefault(settings?.default_target_margin_pct)}
                     className={inputBaseClass}
@@ -337,7 +398,7 @@ export default async function ConfiguracoesV2Page() {
                 </FieldBlock>
 
                 <FieldBlock label="Impostos (%)">
-                  <DecimalInput
+                  <DecimalField
                     name="default_taxes_pct"
                     defaultValue={decimalDefault(settings?.default_taxes_pct)}
                     className={inputBaseClass}
@@ -345,7 +406,7 @@ export default async function ConfiguracoesV2Page() {
                 </FieldBlock>
 
                 <FieldBlock label="Taxa cartão (%)">
-                  <DecimalInput
+                  <DecimalField
                     name="default_card_fee_pct"
                     defaultValue={decimalDefault(settings?.default_card_fee_pct)}
                     className={inputBaseClass}
@@ -353,7 +414,7 @@ export default async function ConfiguracoesV2Page() {
                 </FieldBlock>
 
                 <FieldBlock label="Marketing (%)">
-                  <DecimalInput
+                  <DecimalField
                     name="default_marketing_pct"
                     defaultValue={decimalDefault(settings?.default_marketing_pct)}
                     className={inputBaseClass}
@@ -361,33 +422,25 @@ export default async function ConfiguracoesV2Page() {
                 </FieldBlock>
 
                 <FieldBlock label="Outras deduções (%)">
-                  <DecimalInput
+                  <DecimalField
                     name="default_other_deductions_pct"
-                    defaultValue={decimalDefault(
-                      settings?.default_other_deductions_pct
-                    )}
+                    defaultValue={decimalDefault(settings?.default_other_deductions_pct)}
                     className={inputBaseClass}
                   />
                 </FieldBlock>
 
                 <FieldBlock label="Embalagem">
-                  <MoneyInput
+                  <MoneyField
                     name="default_packaging_rs"
                     defaultValue={moneyDefault(settings?.default_packaging_rs)}
-                    prefix="R$"
-                    wrapperClassName="w-full"
                     className={inputBaseClass}
                   />
                 </FieldBlock>
 
                 <FieldBlock label="Despesa por peça">
-                  <MoneyInput
+                  <MoneyField
                     name="default_piece_expense_rs"
-                    defaultValue={moneyDefault(
-                      settings?.default_piece_expense_rs
-                    )}
-                    prefix="R$"
-                    wrapperClassName="w-full"
+                    defaultValue={moneyDefault(settings?.default_piece_expense_rs)}
                     className={inputBaseClass}
                   />
                 </FieldBlock>
@@ -404,34 +457,29 @@ export default async function ConfiguracoesV2Page() {
             </form>
           </Section>
 
+          {/* ── goals ── */}
           <Section title="Objetivos">
             <form action={updateGoals} className="grid gap-3">
               <FieldBlock label="Meta de lucro">
-                <MoneyInput
+                <MoneyField
                   name="monthly_profit_goal_rs"
                   defaultValue={moneyDefault(monthlyProfitGoal)}
-                  prefix="R$"
-                  wrapperClassName="w-full"
                   className={inputBaseClass}
                 />
               </FieldBlock>
 
               <FieldBlock label="Caixa">
-                <MoneyInput
+                <MoneyField
                   name="cash_goal_rs"
                   defaultValue={moneyDefault(cashGoal)}
-                  prefix="R$"
-                  wrapperClassName="w-full"
                   className={inputBaseClass}
                 />
               </FieldBlock>
 
               <FieldBlock label="Compras">
-                <MoneyInput
+                <MoneyField
                   name="purchase_goal_rs"
                   defaultValue={moneyDefault(purchaseGoal)}
-                  prefix="R$"
-                  wrapperClassName="w-full"
                   className={inputBaseClass}
                 />
               </FieldBlock>
@@ -448,6 +496,7 @@ export default async function ConfiguracoesV2Page() {
           </Section>
         </div>
 
+        {/* ── fixed costs ── */}
         <Section
           title="Custos fixos"
           right={
