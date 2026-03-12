@@ -1,8 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTransition } from "react";
 import DecimalInput from "@/components/decimal-input";
 import MoneyInput from "@/components/money-input";
+import { updatePricing, updateGoals } from "./actions";
 
 const inputBaseClass =
   "h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[44px]";
@@ -27,7 +29,7 @@ type Settings = {
   default_piece_expense_rs?: number | null;
 };
 
-/** 3 → "3,00" | 0 ou null → "" (campo vazio, mostra placeholder) */
+/** 3 → "3,00" | 0 ou null → "" */
 function decimalDefault(value: number | null | undefined): string {
   if (value === null || value === undefined || Number(value) === 0) return "";
   return Number(value).toLocaleString("pt-BR", {
@@ -45,15 +47,17 @@ function moneyDefault(value: number | null | undefined): string {
   });
 }
 
-export function PricingForm({
-  settings,
-  action,
-}: {
-  settings: Settings | null;
-  action: (formData: FormData) => Promise<void>;
-}) {
+export function PricingForm({ settings }: { settings: Settings | null }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(() => { updatePricing(formData); });
+  }
+
   return (
-    <form action={action} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
         <FieldBlock label="Markup (x)">
           <DecimalInput
@@ -127,9 +131,10 @@ export function PricingForm({
       <div className="pt-1">
         <button
           type="submit"
-          className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 lg:h-[44px]"
+          disabled={pending}
+          className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 disabled:opacity-50 lg:h-[44px]"
         >
-          Salvar padrões
+          {pending ? "Salvando..." : "Salvar padrões"}
         </button>
       </div>
     </form>
@@ -140,15 +145,21 @@ export function GoalsForm({
   monthlyProfitGoal,
   cashGoal,
   purchaseGoal,
-  action,
 }: {
   monthlyProfitGoal: number;
   cashGoal: number;
   purchaseGoal: number;
-  action: (formData: FormData) => Promise<void>;
 }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(() => { updateGoals(formData); });
+  }
+
   return (
-    <form action={action} className="grid gap-3">
+    <form onSubmit={handleSubmit} className="grid gap-3">
       <FieldBlock label="Meta de lucro">
         <MoneyInput
           name="monthly_profit_goal_rs"
@@ -182,9 +193,10 @@ export function GoalsForm({
       <div className="pt-1">
         <button
           type="submit"
-          className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 lg:h-[44px]"
+          disabled={pending}
+          className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 disabled:opacity-50 lg:h-[44px]"
         >
-          Salvar objetivos
+          {pending ? "Salvando..." : "Salvar objetivos"}
         </button>
       </div>
     </form>
