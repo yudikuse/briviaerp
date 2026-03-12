@@ -9,47 +9,50 @@ type DecimalInputProps = {
   placeholder?: string;
 };
 
+/** "3,00" → "300", "6,54" → "654" */
+function defaultToDigits(value: string): string {
+  if (!value) return "";
+  const clean = value.replace(/\./g, "").replace(",", "");
+  return clean.replace(/^0+/, "") || "";
+}
+
+/** "654" → "6,54", "300" → "3,00", "" → "" */
+function digitsToDisplay(digits: string): string {
+  if (!digits) return "";
+  const num = Number(digits) / 100;
+  return num.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function DecimalInput({
   name,
   defaultValue = "",
   className = "",
   placeholder = "0,00",
 }: DecimalInputProps) {
-  const [value, setValue] = useState(defaultValue);
+  const [digits, setDigits] = useState(() => defaultToDigits(defaultValue));
+
+  const display = digitsToDisplay(digits);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    let v = e.target.value;
-
-    // teclado numérico usa ponto → converte para vírgula
-    v = v.replace(/\./g, ",");
-
-    // só dígitos e vírgula
-    v = v.replace(/[^0-9,]/g, "");
-
-    // no máximo uma vírgula
-    const parts = v.split(",");
-    if (parts.length > 2) v = parts[0] + "," + parts.slice(1).join("");
-
-    // no máximo 2 casas após a vírgula
-    const p2 = v.split(",");
-    if (p2.length === 2) v = p2[0] + "," + p2[1].slice(0, 2);
-
-    setValue(v);
+    const only = e.target.value.replace(/\D/g, "");
+    const trimmed = only.replace(/^0+/, "").slice(0, 7); // máx 99.999,99
+    setDigits(trimmed);
   }
 
   return (
     <input
       name={name}
       type="text"
-      inputMode="decimal"
+      inputMode="numeric"
       autoComplete="off"
       spellCheck={false}
-      value={value}
+      value={display}
       placeholder={placeholder}
       onChange={handleChange}
-      maxLength={9}
       className={className}
     />
   );
 }
-
