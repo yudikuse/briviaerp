@@ -133,14 +133,8 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
 
         {/* ── desktop sidebar ── */}
         <aside className="hidden w-[220px] shrink-0 rounded-[18px] bg-[#050607] px-4 py-5 text-white shadow-[0_12px_32px_rgba(0,0,0,0.14)] lg:flex lg:flex-col">
-          <div className="flex items-center gap-3 border-b border-white/8 pb-5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-white text-[14px] font-semibold text-[#111827]">
-              BM
-            </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-white/42">Brivia</p>
-              <p className="text-[16px] font-semibold text-white">Modas</p>
-            </div>
+          <div className="border-b border-white/8 pb-5">
+            <img src="/logo.png" alt="Brivia Modas" className="h-[48px] w-auto object-contain" />
           </div>
 
           <nav className="mt-6 space-y-1.5">
@@ -162,9 +156,7 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 {/* mobile logo */}
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#111827] text-[12px] font-bold text-white lg:hidden">
-                  BM
-                </div>
+                <img src="/logo.png" alt="Brivia Modas" className="h-[32px] w-auto object-contain lg:hidden" />
                 <div className="min-w-0">
                   <h1 className="truncate text-[18px] font-semibold tracking-[-0.03em] text-[#111827] lg:text-[24px]">
                     {title}
