@@ -253,34 +253,38 @@ type FixedCost = {
   ordem: number;
 };
 
-function FixedCostRow({ item }: { item: FixedCost }) {
+function FixedCostRow({ item, onSaved }: { item: FixedCost; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
   const [pendingToggle, startToggle] = useTransition();
   const [pendingUpdate, startUpdate] = useTransition();
   const [pendingDelete, startDelete] = useTransition();
 
-  function handleUpdate(e: React.FormEvent<HTMLFormElement>) {
+  async function handleUpdate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     formData.set("id", item.id);
-    startUpdate(async () => {
-      await updateFixedCost(formData);
-      setEditing(false);
-    });
+    startUpdate(() => { updateFixedCost(formData); });
+    await new Promise(r => setTimeout(r, 800));
+    setEditing(false);
+    onSaved();
   }
 
-  function handleToggle() {
+  async function handleToggle() {
     const formData = new FormData();
     formData.set("id", item.id);
     formData.set("ativo", String(item.ativo));
     startToggle(() => toggleFixedCost(formData));
+    await new Promise(r => setTimeout(r, 800));
+    onSaved();
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!confirm(`Excluir "${item.descricao}"?`)) return;
     const formData = new FormData();
     formData.set("id", item.id);
     startDelete(() => deleteFixedCost(formData));
+    await new Promise(r => setTimeout(r, 800));
+    onSaved();
   }
 
   const brl = (v: number) =>
@@ -370,40 +374,35 @@ function FixedCostRow({ item }: { item: FixedCost }) {
   );
 }
 
-function AddFixedCostForm() {
+function AddFixedCostForm({ onSaved }: { onSaved: () => void }) {
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    startTransition(async () => {
-      await addFixedCost(formData);
-      setSavedAt(nowDateTime());
-      form.reset();
-      setOpen(false);
-    });
+    startTransition(() => { addFixedCost(formData); });
+    await new Promise(r => setTimeout(r, 800));
+    form.reset();
+    setOpen(false);
+    onSaved();
   }
 
   if (!open) {
     return (
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="flex h-[38px] items-center gap-2 rounded-[10px] border border-dashed border-[#d0d5dd] bg-white px-3 text-[13px] text-[#667085] transition hover:border-[#111827] hover:text-[#111827]"
-        >
-          + Adicionar custo fixo
-        </button>
-        <SavedBadge savedAt={savedAt} />
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex h-[38px] items-center gap-2 rounded-[10px] border border-dashed border-[#d0d5dd] bg-white px-3 text-[13px] text-[#667085] transition hover:border-[#111827] hover:text-[#111827]"
+      >
+        + Adicionar custo fixo
+      </button>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-2 flex flex-wrap items-end gap-2 rounded-[12px] border border-[#e7ebf0] bg-white p-3">
+    <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2 rounded-[12px] border border-[#e7ebf0] bg-white p-3">
       <div className="flex-1 space-y-1 min-w-[160px]">
         <p className="text-[11px] font-medium text-[#667085]">Descrição</p>
         <input
@@ -443,6 +442,12 @@ function AddFixedCostForm() {
 }
 
 export function FixedCostsList({ items }: { items: FixedCost[] }) {
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  function handleSaved() {
+    setSavedAt(nowDateTime());
+  }
+
   return (
     <div className="space-y-3">
       <div className="overflow-hidden rounded-[12px] bg-white">
@@ -451,10 +456,13 @@ export function FixedCostsList({ items }: { items: FixedCost[] }) {
             Nenhum custo fixo cadastrado.
           </p>
         ) : (
-          items.map((item) => <FixedCostRow key={item.id} item={item} />)
+          items.map((item) => <FixedCostRow key={item.id} item={item} onSaved={handleSaved} />)
         )}
       </div>
-      <AddFixedCostForm />
+      <div className="flex items-center gap-3 pt-2">
+        <AddFixedCostForm onSaved={handleSaved} />
+        <SavedBadge savedAt={savedAt} />
+      </div>
     </div>
   );
 }
