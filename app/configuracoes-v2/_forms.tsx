@@ -31,7 +31,7 @@ function SavedBadge({ savedAt }: { savedAt: string | null }) {
   if (!savedAt) return null;
   return (
     <span className="text-[12px] text-[#22c55e]">
-      ✓ Salvo às {savedAt}
+      ✓ Salvo em {savedAt}
     </span>
   );
 }
@@ -54,9 +54,13 @@ function moneyDefault(value: number | null | undefined): string {
 
 function nowDateTime() {
   const now = new Date();
-  const date = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const time = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  return `${date} ${time}`;
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yy = String(now.getFullYear()).slice(2);
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mi = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  return `${dd}/${mm}/${yy} às ${hh}:${mi}:${ss}`;
 }
 
 // ─── PricingForm ───────────────────────────────────────────────────────────────
@@ -76,13 +80,13 @@ export function PricingForm({ settings }: { settings: Settings | null }) {
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    startTransition(async () => {
-      await updatePricing(formData);
-      setSavedAt(nowDateTime());
-    });
+    startTransition(() => { updatePricing(formData); });
+    // wait a beat for the server action to fire, then show saved
+    await new Promise(r => setTimeout(r, 800));
+    setSavedAt(nowDateTime());
   }
 
   return (
@@ -185,13 +189,12 @@ export function GoalsForm({
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    startTransition(async () => {
-      await updateGoals(formData);
-      setSavedAt(nowDateTime());
-    });
+    startTransition(() => { updateGoals(formData); });
+    await new Promise(r => setTimeout(r, 800));
+    setSavedAt(nowDateTime());
   }
 
   return (
