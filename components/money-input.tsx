@@ -76,9 +76,9 @@ export default function MoneyInput({
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const onlyNums = e.target.value.replace(/\D/g, "");
-    // Drop leading zeros
     const trimmed = onlyNums.replace(/^0+/, "");
     setDigits(trimmed);
+    if (onChange) onChange(Number(trimmed) / 100);
   }
 
   return (
