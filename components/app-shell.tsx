@@ -16,14 +16,6 @@ type NavItem = {
   icon: ReactNode;
 };
 
-function IconHome() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V20h14V9.5" />
-    </svg>
-  );
-}
 
 function IconCart() {
   return (
@@ -65,8 +57,6 @@ function IconChart() {
   );
 }
 
-// ─── desktop sidebar item ──────────────────────────────────────────────────────
-
 function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
@@ -85,8 +75,6 @@ function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
     </Link>
   );
 }
-
-// ─── mobile bottom nav item ───────────────────────────────────────────────────
 
 function BottomNavItem({ item, active }: { item: NavItem; active: boolean }) {
   return (
@@ -109,21 +97,17 @@ function BottomNavItem({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-// ─── shell ─────────────────────────────────────────────────────────────────────
-
 export function AppShell({ title, subtitle, children }: AppShellProps) {
   const pathname = usePathname();
 
   const navItems: NavItem[] = [
-    { href: "/", label: "Início", icon: <IconHome /> },
+    { href: "/relatorios", label: "Dashboard", icon: <IconChart /> },
     { href: "/compras", label: "Compras", icon: <IconCart /> },
     { href: "/vendas", label: "Vendas", icon: <IconBox /> },
-    { href: "/relatorios", label: "Relatórios", icon: <IconChart /> },
     { href: "/configuracoes-v2", label: "Config.", icon: <IconSettings /> },
   ];
 
   function isActive(item: NavItem) {
-    if (item.href === "/") return pathname === "/";
     return pathname?.startsWith(item.href) ?? false;
   }
 
@@ -151,11 +135,9 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
 
         {/* ── main ── */}
         <main className="min-w-0 flex-1 bg-white pb-[72px] lg:rounded-[18px] lg:pb-0 lg:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          {/* header */}
           <header className="border-b border-[#edf0f4] px-4 py-4 lg:px-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
-                {/* mobile logo */}
                 <img src="/logo.png" alt="Brivia Modas" className="h-[32px] w-auto object-contain lg:hidden" />
                 <div className="min-w-0">
                   <h1 className="truncate text-[18px] font-semibold tracking-[-0.03em] text-[#111827] lg:text-[24px]">
@@ -169,7 +151,6 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
                 </div>
               </div>
 
-              {/* desktop right */}
               <div className="hidden items-center gap-3 lg:flex">
                 <div className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#eceff3] bg-[#fafbfc]">
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#ff6a2b] text-[13px] font-semibold text-white">
@@ -180,7 +161,6 @@ export function AppShell({ title, subtitle, children }: AppShellProps) {
             </div>
           </header>
 
-          {/* content */}
           <div className="px-4 py-4 lg:px-6 lg:py-5">{children}</div>
         </main>
       </div>
