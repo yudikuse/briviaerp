@@ -9,6 +9,7 @@ type MoneyInputProps = {
   wrapperClassName?: string;
   placeholder?: string;
   prefix?: string;
+  onChange?: (value: number) => void;
 };
 
 /**
@@ -69,6 +70,7 @@ export default function MoneyInput({
   wrapperClassName = "",
   placeholder = "0,00",
   prefix,
+  onChange,
 }: MoneyInputProps) {
   const [digits, setDigits] = useState(() => initialDigits(defaultValue));
 
