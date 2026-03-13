@@ -44,7 +44,7 @@ function MetricCard({ label, value, accent, hint }: {
       <p className={accent ? "text-[14px] font-medium text-white/80 lg:text-[15px]" : "text-[14px] font-medium text-[#667085] lg:text-[15px]"}>
         {label}
       </p>
-      <p className="mt-3 text-[18px] font-semibold tracking-[-0.03em] lg:text-[24px]">{value}</p>
+      <p className="mt-2 text-[20px] font-bold tracking-[-0.03em] lg:text-[22px]">{value}</p>
       {hint && <p className={accent ? "mt-2 text-[11px] text-white/70 lg:text-[12px]" : "mt-2 text-[11px] text-[#98a2b3] lg:text-[12px]"}>{hint}</p>}
     </div>
   );
@@ -96,7 +96,7 @@ export default async function ComprasPage() {
       <div className="space-y-4 lg:space-y-5">
 
         {/* ── summary cards ── */}
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <MetricCard label="Produtos" value={String(totalItems)} hint={`${totalUnits} unidades`} />
           <MetricCard label="Valor em estoque" value={brl(stockValue)} accent />
           <MetricCard label="Valor de venda" value={brl(saleValue)} hint="A preço atual" />
