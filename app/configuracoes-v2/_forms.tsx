@@ -16,12 +16,12 @@ import {
 // ─── shared ────────────────────────────────────────────────────────────────────
 
 const inputBaseClass =
-  "h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[44px]";
+  "h-[52px] w-full rounded-[10px] bg-white px-3 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[48px] lg:text-[15px]";
 
 function FieldBlock({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
+      <p className="text-[13px] font-medium text-[#667085] lg:text-[12px]">{label}</p>
       {children}
     </div>
   );
@@ -165,7 +165,7 @@ export function PricingForm({ settings }: { settings: Settings | null }) {
         <button
           type="submit"
           disabled={pending}
-          className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 disabled:opacity-50 lg:h-[44px]"
+          className="h-[52px] rounded-[10px] bg-[#111827] px-6 text-[16px] font-medium text-white transition hover:opacity-90 disabled:opacity-50"
         >
           {pending ? "Salvando..." : "Salvar padrões"}
         </button>
@@ -233,7 +233,7 @@ export function GoalsForm({
         <button
           type="submit"
           disabled={pending}
-          className="h-[42px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white transition hover:opacity-90 disabled:opacity-50 lg:h-[44px]"
+          className="h-[52px] rounded-[10px] bg-[#111827] px-6 text-[16px] font-medium text-white transition hover:opacity-90 disabled:opacity-50"
         >
           {pending ? "Salvando..." : "Salvar objetivos"}
         </button>
@@ -297,27 +297,27 @@ function FixedCostRow({ item, onSaved }: { item: FixedCost; onSaved: () => void 
           name="descricao"
           defaultValue={item.descricao}
           required
-          className="h-[36px] flex-1 rounded-[8px] bg-white px-2 text-[13px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+          className="h-[48px] flex-1 rounded-[10px] bg-white px-3 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
         />
         <div className="relative flex items-center">
           <span className="absolute left-2 text-[12px] text-[#667085]">R$</span>
           <MoneyInput
             name="valor_mensal"
             defaultValue={item.valor_mensal > 0 ? item.valor_mensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
-            className="h-[36px] w-[120px] rounded-[8px] bg-white pl-8 pr-2 text-[13px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+            className="h-[48px] w-[130px] rounded-[10px] bg-white pl-9 pr-2 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
           />
         </div>
         <button
           type="submit"
           disabled={pendingUpdate}
-          className="h-[36px] rounded-[8px] bg-[#111827] px-3 text-[12px] font-medium text-white disabled:opacity-50"
+          className="h-[48px] rounded-[10px] bg-[#111827] px-4 text-[14px] font-medium text-white disabled:opacity-50"
         >
           {pendingUpdate ? "..." : "Salvar"}
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="h-[36px] rounded-[8px] px-3 text-[12px] text-[#667085] hover:bg-[#f1f4f8]"
+          className="h-[48px] rounded-[10px] px-4 text-[14px] text-[#667085] hover:bg-[#f1f4f8]"
         >
           Cancelar
         </button>
@@ -342,7 +342,7 @@ function FixedCostRow({ item, onSaved }: { item: FixedCost; onSaved: () => void 
           onClick={handleToggle}
           disabled={pendingToggle}
           title={item.ativo ? "Desativar" : "Ativar"}
-          className={`h-[30px] rounded-[7px] px-2 text-[11px] font-medium transition disabled:opacity-50 ${
+          className={`h-[44px] rounded-[10px] px-3 text-[12px] font-medium transition disabled:opacity-50 ${
             item.ativo
               ? "bg-[#dcfce7] text-[#166534] hover:bg-[#bbf7d0]"
               : "bg-[#f1f4f8] text-[#667085] hover:bg-[#e4e7ec]"
@@ -355,7 +355,7 @@ function FixedCostRow({ item, onSaved }: { item: FixedCost; onSaved: () => void 
           type="button"
           onClick={() => setEditing(true)}
           title="Editar"
-          className="h-[30px] w-[30px] rounded-[7px] text-[14px] text-[#667085] transition hover:bg-[#f1f4f8]"
+          className="h-[44px] w-[44px] rounded-[10px] text-[18px] text-[#667085] transition hover:bg-[#f1f4f8]"
         >
           ✏️
         </button>
@@ -365,7 +365,7 @@ function FixedCostRow({ item, onSaved }: { item: FixedCost; onSaved: () => void 
           onClick={handleDelete}
           disabled={pendingDelete}
           title="Excluir"
-          className="h-[30px] w-[30px] rounded-[7px] text-[14px] text-[#667085] transition hover:bg-[#fee2e2] disabled:opacity-50"
+          className="h-[44px] w-[44px] rounded-[10px] text-[18px] text-[#667085] transition hover:bg-[#fee2e2] disabled:opacity-50"
         >
           🗑️
         </button>
@@ -394,7 +394,7 @@ function AddFixedCostForm({ onSaved }: { onSaved: () => void }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-[38px] items-center gap-2 rounded-[10px] border border-dashed border-[#d0d5dd] bg-white px-3 text-[13px] text-[#667085] transition hover:border-[#111827] hover:text-[#111827]"
+        className="flex h-[52px] items-center gap-2 rounded-[10px] border border-dashed border-[#d0d5dd] bg-white px-4 text-[15px] text-[#667085] transition hover:border-[#111827] hover:text-[#111827]"
       >
         + Adicionar custo fixo
       </button>
@@ -409,7 +409,7 @@ function AddFixedCostForm({ onSaved }: { onSaved: () => void }) {
           name="descricao"
           placeholder="Ex: Aluguel"
           required
-          className="h-[38px] w-full rounded-[8px] bg-[#f6f7f9] px-2 text-[13px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+          className="h-[52px] w-full rounded-[10px] bg-[#f6f7f9] px-3 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
         />
       </div>
       <div className="space-y-1 w-[140px]">
@@ -418,21 +418,21 @@ function AddFixedCostForm({ onSaved }: { onSaved: () => void }) {
           name="valor_mensal"
           prefix="R$"
           wrapperClassName="w-full"
-          className="h-[38px] w-full rounded-[8px] bg-[#f6f7f9] px-3 text-[13px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+          className="h-[52px] w-full rounded-[10px] bg-[#f6f7f9] px-3 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
         />
       </div>
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={pending}
-          className="h-[38px] rounded-[8px] bg-[#111827] px-3 text-[13px] font-medium text-white disabled:opacity-50"
+          className="h-[52px] rounded-[10px] bg-[#111827] px-4 text-[15px] font-medium text-white disabled:opacity-50"
         >
           {pending ? "Salvando..." : "Adicionar"}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="h-[38px] rounded-[8px] px-3 text-[13px] text-[#667085] hover:bg-[#f1f4f8]"
+          className="h-[52px] rounded-[10px] px-4 text-[15px] text-[#667085] hover:bg-[#f1f4f8]"
         >
           Cancelar
         </button>
