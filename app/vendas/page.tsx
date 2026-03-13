@@ -94,7 +94,7 @@ export default async function VendasPage() {
   // items count + lucro per sale
   const itemsPerSale: Record<string, number> = {};
   const lucroPerSale: Record<string, number> = {};
-  for (const si of saleItemsAll ?? []) {
+  for (const si of (saleItemsAll ?? []) as any[]) {
     itemsPerSale[si.sale_id] = (itemsPerSale[si.sale_id] ?? 0) + si.quantidade;
     lucroPerSale[si.sale_id] = (lucroPerSale[si.sale_id] ?? 0) + Number(si.lucro_liquido_rs ?? 0);
   }
@@ -156,6 +156,10 @@ export default async function VendasPage() {
       </div>
     </AppShell>
   );
+}
+
+function pct(v: number) {
+  return `${(v * 100).toFixed(1).replace(".", ",")}%`;
 }
 
 function pct(v: number) {
