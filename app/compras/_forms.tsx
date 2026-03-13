@@ -9,7 +9,7 @@ import { savePurchase, updateProductPrice } from "./actions";
 // ─── shared ────────────────────────────────────────────────────────────────────
 
 const inputBase =
-  "h-[42px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[44px]";
+  "h-[52px] w-full rounded-[10px] bg-white px-3 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] transition focus:ring-2 focus:ring-[#cfd8e3] lg:h-[48px] lg:text-[15px]";
 
 const CATEGORIAS = [
   "Vestidos", "Conjuntos", "Blusas", "Calças", "Saias",
@@ -44,7 +44,7 @@ function SavedBadge({ savedAt }: { savedAt: string | null }) {
 function FieldBlock({ label, children, span2 = false }: { label: string; children: ReactNode; span2?: boolean }) {
   return (
     <div className={`space-y-2 ${span2 ? "md:col-span-2" : ""}`}>
-      <p className="text-[12px] font-medium text-[#667085] lg:text-[13px]">{label}</p>
+      <p className="text-[13px] font-medium text-[#667085] lg:text-[12px]">{label}</p>
       {children}
     </div>
   );
@@ -139,6 +139,7 @@ export function PurchaseForm({
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [customCategoria, setCustomCategoria] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // pricing state
   const modo = (settings?.pricing_mode ?? "MARKUP") as "MARKUP" | "MARGEM";
@@ -152,11 +153,11 @@ export function PurchaseForm({
   const [embalagem, setEmbalagem] = useState(Number(settings?.default_packaging_rs ?? 0));
   const [peca, setPeca] = useState(Number(settings?.default_piece_expense_rs ?? 0));
   const [precoFinalStr, setPrecoFinalStr] = useState("");
+  const [userEditedFinal, setUserEditedFinal] = useState(false);
+  const [formData, setFormData] = useState<Record<string, string>>({});
 
   const result = calcPricing({ custo, markup, margem, impostos, cartao, marketing, outras, embalagem, peca, modo });
 
-  // sync preço final with suggested when suggested changes (only if user hasn't overridden)
-  const [userEditedFinal, setUserEditedFinal] = useState(false);
   useEffect(() => {
     if (!userEditedFinal && result.sugerido > 0) {
       setPrecoFinalStr(result.sugerido.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -167,212 +168,255 @@ export function PurchaseForm({
     return parseFloat(s.replace(/\./g, "").replace(",", ".")) || 0;
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const decFmt = (v: number) => v > 0 ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+
+  // Step 1 → collect product fields into state, go to step 2
+  function handleStep1(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    fd.set("preco_sugerido", String(result.sugerido));
-    fd.set("preco_final", String(parsePtBr(precoFinalStr)));
-    startTransition(() => { savePurchase(fd); });
+    const fd = new FormData(e.currentTarget);
+    const data: Record<string, string> = {};
+    fd.forEach((v, k) => { data[k] = String(v); });
+    setFormData(data);
+    setStep(2);
+  }
+
+  // Step 2 → collect purchase fields, go to step 3
+  function handleStep2(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const data: Record<string, string> = { ...formData };
+    fd.forEach((v, k) => { data[k] = String(v); });
+    setFormData(data);
+    setStep(3);
+  }
+
+  // Step 3 → final submit
+  async function handleStep3(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const all = new FormData();
+    // merge step 1+2 data
+    Object.entries(formData).forEach(([k, v]) => all.set(k, v));
+    // merge step 3 fields
+    fd.forEach((v, k) => all.set(k, v));
+    all.set("preco_sugerido", String(result.sugerido));
+    all.set("preco_final", String(parsePtBr(precoFinalStr)));
+    startTransition(() => { savePurchase(all); });
     await new Promise(r => setTimeout(r, 900));
     setSavedAt(nowDateTime());
-    form.reset();
+    setFormData({});
+    setStep(1);
     setUserEditedFinal(false);
     setCusto(0);
   }
 
-  const decFmt = (v: number) => v > 0 ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  const steps = [
+    { n: 1, label: "Produto" },
+    { n: 2, label: "Compra" },
+    { n: 3, label: "Preço" },
+  ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* ── dados do produto ── */}
-      <div className="space-y-3">
-        <SectionTitle>Dados do produto</SectionTitle>
-        <div className="grid gap-3 md:grid-cols-2">
-          <FieldBlock label="Código (automático)">
-            <input
-              name="codigo"
-              defaultValue={nextCode}
-              readOnly
-              className={`${inputBase} bg-[#f6f7f9] text-[#667085] cursor-default`}
-            />
-          </FieldBlock>
+    <div className="space-y-5">
+      {/* ── step indicator ── */}
+      <div className="flex items-center gap-0">
+        {steps.map((s, i) => (
+          <div key={s.n} className="flex items-center flex-1">
+            <button
+              type="button"
+              onClick={() => { if (s.n < step) setStep(s.n as 1 | 2 | 3); }}
+              className={[
+                "flex h-[32px] w-[32px] items-center justify-center rounded-full text-[13px] font-semibold transition shrink-0",
+                step === s.n ? "bg-[#111827] text-white" : s.n < step ? "bg-[#22c55e] text-white cursor-pointer" : "bg-[#e5e7eb] text-[#9ca3af]",
+              ].join(" ")}
+            >
+              {s.n < step ? "✓" : s.n}
+            </button>
+            <span className={[
+              "ml-1.5 text-[12px] font-medium",
+              step === s.n ? "text-[#111827]" : s.n < step ? "text-[#22c55e]" : "text-[#9ca3af]",
+            ].join(" ")}>
+              {s.label}
+            </span>
+            {i < steps.length - 1 && (
+              <div className={`mx-2 flex-1 h-[2px] rounded-full ${s.n < step ? "bg-[#22c55e]" : "bg-[#e5e7eb]"}`} />
+            )}
+          </div>
+        ))}
+      </div>
 
-          <FieldBlock label="Nome da peça">
-            <input name="nome" required placeholder="Ex: Vestido floral" className={inputBase} />
-          </FieldBlock>
-
-          <FieldBlock label="Categoria">
-            {customCategoria ? (
-              <div className="flex gap-2">
-                <input name="categoria" placeholder="Nova categoria" className={inputBase} />
-                <button type="button" onClick={() => setCustomCategoria(false)}
-                  className="h-[42px] px-3 rounded-[10px] text-[13px] text-[#667085] hover:bg-[#f1f4f8] ring-1 ring-[#e7ebf0]">
-                  ↩
-                </button>
-              </div>
-            ) : (
-              <select name="categoria" className={inputBase}
-                onChange={e => { if (e.target.value === "__nova__") { setCustomCategoria(true); } }}>
+      {/* ── step 1: dados do produto ── */}
+      {step === 1 && (
+        <form onSubmit={handleStep1} className="space-y-4">
+          <SectionTitle>Dados do produto</SectionTitle>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FieldBlock label="Código (automático)">
+              <input
+                name="codigo"
+                defaultValue={formData.codigo || nextCode}
+                readOnly
+                className={`${inputBase} bg-[#f6f7f9] text-[#667085] cursor-default`}
+              />
+            </FieldBlock>
+            <FieldBlock label="Nome da peça">
+              <input name="nome" required defaultValue={formData.nome || ""} placeholder="Ex: Vestido floral" className={inputBase} />
+            </FieldBlock>
+            <FieldBlock label="Categoria">
+              {customCategoria ? (
+                <div className="flex gap-2">
+                  <input name="categoria" placeholder="Nova categoria" defaultValue={formData.categoria || ""} className={inputBase} />
+                  <button type="button" onClick={() => setCustomCategoria(false)}
+                    className="h-[52px] px-4 rounded-[10px] text-[16px] text-[#667085] hover:bg-[#f1f4f8] ring-1 ring-[#e7ebf0]">
+                    ↩
+                  </button>
+                </div>
+              ) : (
+                <select name="categoria" className={inputBase} defaultValue={formData.categoria || ""}
+                  onChange={e => { if (e.target.value === "__nova__") setCustomCategoria(true); }}>
+                  <option value="">Selecionar...</option>
+                  {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="__nova__">+ Nova categoria...</option>
+                </select>
+              )}
+            </FieldBlock>
+            <FieldBlock label="Tamanho">
+              <select name="tamanho" className={inputBase} defaultValue={formData.tamanho || ""}>
                 <option value="">Selecionar...</option>
-                {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                <option value="__nova__">+ Nova categoria...</option>
+                {TAMANHOS.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
+            </FieldBlock>
+            <FieldBlock label="Cor">
+              <input name="cor" defaultValue={formData.cor || ""} placeholder="Ex: Preto" className={inputBase} />
+            </FieldBlock>
+            <FieldBlock label="Fornecedor">
+              <input name="fornecedor" defaultValue={formData.fornecedor || ""} placeholder="Nome do fornecedor" className={inputBase} />
+            </FieldBlock>
+          </div>
+          <button type="submit"
+            className="h-[52px] w-full rounded-[10px] bg-[#111827] text-[16px] font-medium text-white transition hover:opacity-90 md:w-auto md:px-8">
+            Próximo →
+          </button>
+        </form>
+      )}
+
+      {/* ── step 2: dados da compra ── */}
+      {step === 2 && (
+        <form onSubmit={handleStep2} className="space-y-4">
+          <SectionTitle>Dados da compra</SectionTitle>
+          <div className="grid gap-4 md:grid-cols-2">
+            <FieldBlock label="Data da compra">
+              <input
+                name="data_compra"
+                type="date"
+                defaultValue={formData.data_compra || new Date().toISOString().slice(0, 10)}
+                className={inputBase}
+              />
+            </FieldBlock>
+            <FieldBlock label="Quantidade">
+              <input name="quantidade" type="number" min="1" defaultValue={formData.quantidade || "1"} className={inputBase} />
+            </FieldBlock>
+            <FieldBlock label="Custo unitário" span2>
+              <MoneyInput
+                name="custo_unitario"
+                prefix="R$"
+                wrapperClassName="w-full"
+                className={inputBase}
+                defaultValue={formData.custo_unitario ? (Number(formData.custo_unitario) > 0 ? Number(formData.custo_unitario).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "") : ""}
+                onChange={(v: number) => setCusto(v)}
+              />
+            </FieldBlock>
+          </div>
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setStep(1)}
+              className="h-[52px] flex-1 rounded-[10px] border border-[#e7ebf0] text-[16px] text-[#667085] hover:bg-[#f6f7f9] md:flex-none md:px-6">
+              ← Voltar
+            </button>
+            <button type="submit"
+              className="h-[52px] flex-1 rounded-[10px] bg-[#111827] text-[16px] font-medium text-white hover:opacity-90 md:flex-none md:px-8">
+              Próximo →
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* ── step 3: precificação ── */}
+      {step === 3 && (
+        <form onSubmit={handleStep3} className="space-y-4">
+          <SectionTitle>Precificação</SectionTitle>
+          <div className="grid gap-4 md:grid-cols-2">
+            {modo === "MARKUP" ? (
+              <FieldBlock label="Markup (x)">
+                <DecimalInput name="markup_x" defaultValue={decFmt(markup)} className={inputBase} onChange={(v: number) => setMarkup(v)} />
+              </FieldBlock>
+            ) : (
+              <FieldBlock label="Margem alvo (%)">
+                <DecimalInput name="margem_pct" defaultValue={decFmt(margem)} className={inputBase} onChange={(v: number) => setMargem(v)} />
+              </FieldBlock>
+            )}
+            <input type="hidden" name="markup_x" value={markup} />
+            <input type="hidden" name="margem_pct" value={margem} />
+            <FieldBlock label="Impostos (%)">
+              <DecimalInput name="impostos_pct" defaultValue={decFmt(impostos)} className={inputBase} onChange={(v: number) => setImpostos(v)} />
+            </FieldBlock>
+            <FieldBlock label="Taxa cartão (%)">
+              <DecimalInput name="cartao_pct" defaultValue={decFmt(cartao)} className={inputBase} onChange={(v: number) => setCartao(v)} />
+            </FieldBlock>
+            <FieldBlock label="Marketing (%)">
+              <DecimalInput name="marketing_pct" defaultValue={decFmt(marketing)} className={inputBase} onChange={(v: number) => setMarketing(v)} />
+            </FieldBlock>
+            <FieldBlock label="Outras deduções (%)">
+              <DecimalInput name="outras_pct" defaultValue={decFmt(outras)} className={inputBase} onChange={(v: number) => setOutras(v)} />
+            </FieldBlock>
+            <FieldBlock label="Embalagem (R$)">
+              <MoneyInput name="embalagem_rs" prefix="R$" wrapperClassName="w-full" className={inputBase} defaultValue={decFmt(embalagem)} onChange={(v: number) => setEmbalagem(v)} />
+            </FieldBlock>
+            <FieldBlock label="Despesa por peça (R$)">
+              <MoneyInput name="peca_rs" prefix="R$" wrapperClassName="w-full" className={inputBase} defaultValue={decFmt(peca)} onChange={(v: number) => setPeca(v)} />
+            </FieldBlock>
+          </div>
+
+          {/* resultado ao vivo */}
+          <div className="grid gap-3 grid-cols-2">
+            <StatCard label="Preço sugerido" value={brl(result.sugerido)} accent />
+            <StatCard label="Margem líquida" value={pct(result.margemLiquida)} />
+            <StatCard label="Lucro bruto" value={brl(result.lucroBruto)} />
+            <StatCard label="Lucro líquido" value={brl(result.lucroLiquido)} />
+          </div>
+
+          <FieldBlock label="Preço de venda final">
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-[16px] text-[#667085] pointer-events-none">R$</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={precoFinalStr}
+                onChange={e => { setUserEditedFinal(true); setPrecoFinalStr(e.target.value.replace(/[^0-9,.]/g, "")); }}
+                placeholder={brl(result.sugerido).replace("R$\u00a0", "")}
+                className={`${inputBase} pl-10`}
+              />
+            </div>
+            {userEditedFinal && result.sugerido > 0 && (
+              <button type="button" onClick={() => setUserEditedFinal(false)}
+                className="mt-1 text-[12px] text-[#667085] underline underline-offset-2 hover:text-[#111827]">
+                Usar preço sugerido ({brl(result.sugerido)})
+              </button>
             )}
           </FieldBlock>
 
-          <FieldBlock label="Tamanho">
-            <select name="tamanho" className={inputBase}>
-              <option value="">Selecionar...</option>
-              {TAMANHOS.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </FieldBlock>
-
-          <FieldBlock label="Cor">
-            <input name="cor" placeholder="Ex: Preto" className={inputBase} />
-          </FieldBlock>
-
-          <FieldBlock label="Fornecedor">
-            <input name="fornecedor" placeholder="Nome do fornecedor" className={inputBase} />
-          </FieldBlock>
-        </div>
-      </div>
-
-      {/* ── dados da compra ── */}
-      <div className="space-y-3">
-        <SectionTitle>Dados da compra</SectionTitle>
-        <div className="grid gap-3 md:grid-cols-2">
-          <FieldBlock label="Data da compra">
-            <input
-              name="data_compra"
-              type="date"
-              defaultValue={new Date().toISOString().slice(0, 10)}
-              className={inputBase}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Quantidade">
-            <input
-              name="quantidade"
-              type="number"
-              min="1"
-              defaultValue="1"
-              className={inputBase}
-            />
-          </FieldBlock>
-
-          <FieldBlock label="Custo unitário" span2>
-            <MoneyInput
-              name="custo_unitario"
-              prefix="R$"
-              wrapperClassName="w-full"
-              className={inputBase}
-              defaultValue=""
-              onChange={(v: number) => setCusto(v)}
-            />
-          </FieldBlock>
-        </div>
-      </div>
-
-      {/* ── precificação ── */}
-      <div className="space-y-3">
-        <SectionTitle>Precificação</SectionTitle>
-        <div className="grid gap-3 md:grid-cols-2">
-          {modo === "MARKUP" ? (
-            <FieldBlock label="Markup (x)">
-              <DecimalInput
-                name="markup_x"
-                defaultValue={decFmt(markup)}
-                className={inputBase}
-                onChange={(v: number) => setMarkup(v)}
-              />
-            </FieldBlock>
-          ) : (
-            <FieldBlock label="Margem alvo (%)">
-              <DecimalInput
-                name="margem_pct"
-                defaultValue={decFmt(margem)}
-                className={inputBase}
-                onChange={(v: number) => setMargem(v)}
-              />
-            </FieldBlock>
-          )}
-
-          {/* hidden field for the other mode value */}
-          <input type="hidden" name="markup_x" value={markup} />
-          <input type="hidden" name="margem_pct" value={margem} />
-
-          <FieldBlock label="Impostos (%)">
-            <DecimalInput name="impostos_pct" defaultValue={decFmt(impostos)} className={inputBase} onChange={(v: number) => setImpostos(v)} />
-          </FieldBlock>
-
-          <FieldBlock label="Taxa cartão (%)">
-            <DecimalInput name="cartao_pct" defaultValue={decFmt(cartao)} className={inputBase} onChange={(v: number) => setCartao(v)} />
-          </FieldBlock>
-
-          <FieldBlock label="Marketing (%)">
-            <DecimalInput name="marketing_pct" defaultValue={decFmt(marketing)} className={inputBase} onChange={(v: number) => setMarketing(v)} />
-          </FieldBlock>
-
-          <FieldBlock label="Outras deduções (%)">
-            <DecimalInput name="outras_pct" defaultValue={decFmt(outras)} className={inputBase} onChange={(v: number) => setOutras(v)} />
-          </FieldBlock>
-
-          <FieldBlock label="Embalagem (R$)">
-            <MoneyInput name="embalagem_rs" prefix="R$" wrapperClassName="w-full" className={inputBase} defaultValue={decFmt(embalagem)} onChange={(v: number) => setEmbalagem(v)} />
-          </FieldBlock>
-
-          <FieldBlock label="Despesa por peça (R$)">
-            <MoneyInput name="peca_rs" prefix="R$" wrapperClassName="w-full" className={inputBase} defaultValue={decFmt(peca)} onChange={(v: number) => setPeca(v)} />
-          </FieldBlock>
-        </div>
-      </div>
-
-      {/* ── resultado ── */}
-      <div className="space-y-3">
-        <SectionTitle>Resultado</SectionTitle>
-        <div className="grid gap-3 md:grid-cols-2">
-          <StatCard label="Preço sugerido" value={brl(result.sugerido)} accent />
-          <StatCard label="Margem líquida" value={pct(result.margemLiquida)} />
-          <StatCard label="Lucro bruto unit." value={brl(result.lucroBruto)} />
-          <StatCard label="Lucro líquido unit." value={brl(result.lucroLiquido)} />
-        </div>
-
-        <FieldBlock label="Preço de venda final">
-          <div className="relative flex items-center">
-            <span className="absolute left-3 text-[14px] text-[#667085] pointer-events-none">R$</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={precoFinalStr}
-              onChange={e => {
-                setUserEditedFinal(true);
-                setPrecoFinalStr(e.target.value.replace(/[^0-9,.]/g, ""));
-              }}
-              placeholder={brl(result.sugerido).replace("R$\u00a0", "")}
-              className={`${inputBase} pl-9`}
-            />
-          </div>
-          {userEditedFinal && result.sugerido > 0 && (
-            <button type="button" onClick={() => { setUserEditedFinal(false); }}
-              className="mt-1 text-[11px] text-[#667085] underline underline-offset-2 hover:text-[#111827]">
-              Usar preço sugerido ({brl(result.sugerido)})
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setStep(2)}
+              className="h-[52px] flex-1 rounded-[10px] border border-[#e7ebf0] text-[16px] text-[#667085] hover:bg-[#f6f7f9] md:flex-none md:px-6">
+              ← Voltar
             </button>
-          )}
-        </FieldBlock>
-      </div>
-
-      <div className="flex items-center gap-4 pt-1">
-        <button
-          type="submit"
-          disabled={pending}
-          className="h-[42px] rounded-[10px] bg-[#111827] px-5 text-[14px] font-medium text-white transition hover:opacity-90 disabled:opacity-50 lg:h-[44px]"
-        >
-          {pending ? "Salvando..." : "Registrar compra"}
-        </button>
-        <SavedBadge savedAt={savedAt} />
-      </div>
-    </form>
+            <button type="submit" disabled={pending}
+              className="h-[52px] flex-1 rounded-[10px] bg-[#111827] text-[16px] font-medium text-white hover:opacity-90 disabled:opacity-50 md:flex-none md:px-8">
+              {pending ? "Salvando..." : "Registrar compra"}
+            </button>
+          </div>
+          <SavedBadge savedAt={savedAt} />
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -391,6 +435,99 @@ export type StockItem = {
   estoque_atual: number;
 };
 
+function StockCard({ item }: { item: StockItem }) {
+  const [editing, setEditing] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    fd.set("id", item.id);
+    startTransition(() => { updateProductPrice(fd); });
+    await new Promise(r => setTimeout(r, 700));
+    setEditing(false);
+    setSavedAt(nowDateTime());
+  }
+
+  const margem = item.preco_atual > 0
+    ? ((item.preco_atual - item.custo_unitario) / item.preco_atual) * 100
+    : 0;
+
+  const stockColor = item.estoque_atual <= 0
+    ? "bg-[#fee2e2] text-[#ef4444]"
+    : item.estoque_atual <= 3
+    ? "bg-[#fef3c7] text-[#d97706]"
+    : "bg-[#dcfce7] text-[#166534]";
+
+  return (
+    <div className="border-b border-[#f1f4f8] p-4 last:border-0">
+      {/* top row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-mono text-[#98a2b3]">{item.codigo}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockColor}`}>
+              {item.estoque_atual} un.
+            </span>
+          </div>
+          <p className="mt-1 text-[15px] font-semibold text-[#111827] leading-tight">{item.nome}</p>
+          {(item.categoria || item.cor || item.tamanho) && (
+            <p className="mt-0.5 text-[12px] text-[#98a2b3]">
+              {[item.categoria, item.cor, item.tamanho].filter(Boolean).join(" · ")}
+            </p>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-[11px] text-[#98a2b3]">Margem</p>
+          <p className="text-[14px] font-semibold text-[#111827]">{pct(margem)}</p>
+        </div>
+      </div>
+
+      {/* bottom row */}
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="flex gap-4">
+          <div>
+            <p className="text-[10px] text-[#98a2b3] uppercase tracking-wide">Custo</p>
+            <p className="text-[13px] font-medium text-[#667085]">{brl(item.custo_unitario)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-[#98a2b3] uppercase tracking-wide">Venda</p>
+            {editing ? (
+              <form onSubmit={handleSubmit} className="flex items-center gap-1 mt-0.5">
+                <MoneyInput
+                  name="preco_atual"
+                  prefix="R$"
+                  defaultValue={item.preco_atual > 0 ? item.preco_atual.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
+                  className="h-[40px] w-[110px] rounded-[9px] bg-white pl-8 pr-2 text-[15px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+                />
+                <button type="submit" disabled={pending}
+                  className="h-[40px] w-[40px] rounded-[9px] bg-[#111827] text-[13px] text-white disabled:opacity-50 flex items-center justify-center">
+                  {pending ? "·" : "✓"}
+                </button>
+                <button type="button" onClick={() => setEditing(false)}
+                  className="h-[40px] w-[40px] rounded-[9px] text-[13px] text-[#667085] hover:bg-[#f1f4f8] flex items-center justify-center">
+                  ✕
+                </button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <p className="text-[13px] font-semibold text-[#111827]">{brl(item.preco_atual)}</p>
+                <button type="button" onClick={() => setEditing(true)}
+                  className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[14px] text-[#98a2b3] hover:bg-[#f1f4f8] hover:text-[#111827]">
+                  ✏️
+                </button>
+                {savedAt && <span className="text-[10px] text-[#22c55e]">✓</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Desktop table row (lg+)
 function StockRow({ item }: { item: StockItem }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -436,14 +573,14 @@ function StockRow({ item }: { item: StockItem }) {
               name="preco_atual"
               prefix="R$"
               defaultValue={item.preco_atual > 0 ? item.preco_atual.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
-              className="h-[32px] w-[110px] rounded-[7px] bg-white pl-8 pr-2 text-[12px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+              className="h-[44px] w-[120px] rounded-[9px] bg-white pl-9 pr-2 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
             />
             <button type="submit" disabled={pending}
-              className="h-[32px] rounded-[7px] bg-[#111827] px-2 text-[11px] text-white disabled:opacity-50">
+              className="h-[44px] rounded-[9px] bg-[#111827] px-3 text-[13px] text-white disabled:opacity-50">
               {pending ? "..." : "OK"}
             </button>
             <button type="button" onClick={() => setEditing(false)}
-              className="h-[32px] rounded-[7px] px-2 text-[11px] text-[#667085] hover:bg-[#f1f4f8]">
+              className="h-[44px] rounded-[9px] px-3 text-[13px] text-[#667085] hover:bg-[#f1f4f8]">
               ✕
             </button>
           </form>
@@ -451,7 +588,7 @@ function StockRow({ item }: { item: StockItem }) {
           <div className="flex items-center gap-1">
             <span className="text-[13px] font-medium text-[#111827]">{brl(item.preco_atual)}</span>
             <button type="button" onClick={() => setEditing(true)}
-              className="rounded px-1 text-[11px] text-[#98a2b3] hover:text-[#111827]">
+              className="h-[36px] w-[36px] flex items-center justify-center rounded-[8px] text-[14px] text-[#98a2b3] hover:text-[#111827] hover:bg-[#f1f4f8]">
               ✏️
             </button>
             {savedAt && <span className="text-[10px] text-[#22c55e]">✓</span>}
@@ -480,7 +617,7 @@ export function StockTable({ items }: { items: StockItem[] }) {
         placeholder="Buscar por nome, código ou cor..."
         value={search}
         onChange={e => setSearch(e.target.value)}
-        className="h-[40px] w-full rounded-[10px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
+        className="h-[52px] w-full rounded-[10px] bg-white px-3 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
       />
 
       {filtered.length === 0 ? (
@@ -488,22 +625,29 @@ export function StockTable({ items }: { items: StockItem[] }) {
           {search ? "Nenhum produto encontrado." : "Nenhum produto cadastrado ainda."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-[12px] bg-white">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {["Código", "Produto", "Estoque", "Custo", "Preço venda", "Margem"].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a2b3]">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(item => <StockRow key={item.id} item={item} />)}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Mobile: cards */}
+          <div className="rounded-[12px] bg-white lg:hidden">
+            {filtered.map(item => <StockCard key={item.id} item={item} />)}
+          </div>
+          {/* Desktop: table */}
+          <div className="hidden overflow-x-auto rounded-[12px] bg-white lg:block">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  {["Código", "Produto", "Estoque", "Custo", "Preço venda", "Margem"].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a2b3]">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(item => <StockRow key={item.id} item={item} />)}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );
