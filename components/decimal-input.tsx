@@ -7,12 +7,9 @@ type DecimalInputProps = {
   defaultValue?: string;
   className?: string;
   placeholder?: string;
+  onChange?: (value: number) => void;
 };
 
-/**
- * Converte string pt-BR para centavos inteiros.
- * "3,00" → "300", "6,54" → "654", "3,0" → "300", "3" → "300"
- */
 function defaultToDigits(value: string): string {
   if (!value) return "";
   const normalized = value.replace(/\./g, "").replace(",", ".");
@@ -21,7 +18,6 @@ function defaultToDigits(value: string): string {
   return String(Math.round(num * 100));
 }
 
-/** "654" → "6,54", "300" → "3,00", "" → "" */
 function digitsToDisplay(digits: string): string {
   if (!digits) return "";
   const num = Number(digits) / 100;
@@ -36,6 +32,7 @@ export default function DecimalInput({
   defaultValue = "",
   className = "",
   placeholder = "0,00",
+  onChange,
 }: DecimalInputProps) {
   const [digits, setDigits] = useState(() => defaultToDigits(defaultValue));
 
@@ -43,8 +40,9 @@ export default function DecimalInput({
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const only = e.target.value.replace(/\D/g, "");
-    const trimmed = only.replace(/^0+/, "").slice(0, 7); // máx 99.999,99
+    const trimmed = only.replace(/^0+/, "").slice(0, 7);
     setDigits(trimmed);
+    if (onChange) onChange(Number(trimmed) / 100);
   }
 
   return (
