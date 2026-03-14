@@ -175,3 +175,61 @@ export async function updateProductPrice(formData: FormData) {
 
   revalidatePath("/compras");
 }
+
+export async function updateProduct(formData: FormData) {
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+
+  const nome = String(formData.get("nome") ?? "").trim();
+  const cor = String(formData.get("cor") ?? "").trim();
+  const tamanho = String(formData.get("tamanho") ?? "").trim();
+
+  function parseMoney2(value: FormDataEntryValue | null): number {
+    if (!value) return 0;
+    const cleaned = String(value).trim().replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  const custoUnitario = parseMoney2(formData.get("custo_unitario"));
+  const precoAtual = parseMoney2(formData.get("preco_atual"));
+
+  const fotoFile = formData.get("foto");
+  let fotoUrl: string | null = null;
+  if (fotoFile instanceof File && fotoFile.size > 0) {
+    const { data: prod } = await supabaseAdmin
+      .from("products")
+      .select("codigo")
+      .eq("id", id)
+      .single();
+    if (prod?.codigo) {
+      fotoUrl = await uploadFoto(fotoFile, prod.codigo);
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    nome: nome || undefined,
+    cor: cor || null,
+    tamanho: tamanho || null,
+    custo_unitario: custoUnitario || undefined,
+    preco_atual: precoAtual || undefined,
+    updated_at: new Date().toISOString(),
+  };
+  if (fotoUrl) payload.foto_url = fotoUrl;
+
+  await supabaseAdmin.from("products").update(payload).eq("id", id);
+
+  revalidatePath("/compras");
+  revalidatePath("/vendas");
+}
+
+export async function deleteProduct(id: string) {
+  if (!id) return;
+  await supabaseAdmin
+    .from("products")
+    .update({ ativo: false, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/compras");
+  revalidatePath("/vendas");
+}
