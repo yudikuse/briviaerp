@@ -34,6 +34,35 @@ export async function getNextCode(): Promise<string> {
   return `BRV-${String(next).padStart(3, "0")}`;
 }
 
+async function uploadFoto(file: File, codigo: string): Promise<string | null> {
+  try {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const fileName = `${codigo}.${ext}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    const { error } = await supabaseAdmin.storage
+      .from("product-images")
+      .upload(fileName, buffer, {
+        contentType: file.type || "image/jpeg",
+        upsert: true,
+      });
+
+    if (error) {
+      console.error("Storage upload error:", error.message);
+      return null;
+    }
+
+    const { data } = supabaseAdmin.storage
+      .from("product-images")
+      .getPublicUrl(fileName);
+
+    return data.publicUrl ?? null;
+  } catch (err) {
+    console.error("uploadFoto error:", err);
+    return null;
+  }
+}
+
 export async function savePurchase(formData: FormData) {
   const codigo = String(formData.get("codigo") ?? "").trim();
   const nome = String(formData.get("nome") ?? "").trim();
@@ -55,38 +84,44 @@ export async function savePurchase(formData: FormData) {
   const precoSugerido = parseDecimal(formData.get("preco_sugerido"));
   const precoFinal = parseDecimal(formData.get("preco_final"));
 
-  // Check if product already exists
+  // handle foto upload
+  const fotoFile = formData.get("foto");
+  let fotoUrl: string | null = null;
+  if (fotoFile instanceof File && fotoFile.size > 0) {
+    fotoUrl = await uploadFoto(fotoFile, codigo);
+  }
+
   const { data: existing } = await supabaseAdmin
     .from("products")
-    .select("id")
+    .select("id, foto_url")
     .eq("codigo", codigo)
     .single();
 
   let productId: string;
 
   if (existing?.id) {
-    // Product exists — just update pricing if needed
     productId = existing.id;
-    await supabaseAdmin
-      .from("products")
-      .update({
-        preco_sugerido: precoSugerido,
-        preco_atual: precoFinal,
-        markup_x: markupX || null,
-        margem_desejada_pct: margemPct || null,
-        impostos_pct: impostosPct,
-        taxa_cartao_pct: cartaoPct,
-        marketing_pct: marketingPct,
-        outras_deducoes_pct: outrasPct,
-        embalagem_rs: embalagemRs,
-        despesa_peca_rs: pecaRs,
-        custo_unitario: custoUnitario,
-        fornecedor,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", productId);
+
+    const updatePayload: Record<string, unknown> = {
+      preco_sugerido: precoSugerido,
+      preco_atual: precoFinal,
+      markup_x: markupX || null,
+      margem_desejada_pct: margemPct || null,
+      impostos_pct: impostosPct,
+      taxa_cartao_pct: cartaoPct,
+      marketing_pct: marketingPct,
+      outras_deducoes_pct: outrasPct,
+      embalagem_rs: embalagemRs,
+      despesa_peca_rs: pecaRs,
+      custo_unitario: custoUnitario,
+      fornecedor,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (fotoUrl) updatePayload.foto_url = fotoUrl;
+
+    await supabaseAdmin.from("products").update(updatePayload).eq("id", productId);
   } else {
-    // New product
     const { data: inserted, error } = await supabaseAdmin
       .from("products")
       .insert({
@@ -107,6 +142,7 @@ export async function savePurchase(formData: FormData) {
         despesa_peca_rs: pecaRs,
         preco_sugerido: precoSugerido,
         preco_atual: precoFinal,
+        foto_url: fotoUrl,
         ativo: true,
       })
       .select("id")
@@ -116,7 +152,6 @@ export async function savePurchase(formData: FormData) {
     productId = inserted.id;
   }
 
-  // Record the purchase entry
   await supabaseAdmin.from("purchase_entries").insert({
     product_id: productId,
     data_compra: dataCcompra,
@@ -140,4 +175,3 @@ export async function updateProductPrice(formData: FormData) {
 
   revalidatePath("/compras");
 }
-
