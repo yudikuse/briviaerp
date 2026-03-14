@@ -36,6 +36,31 @@ function nowDateTime() {
   return `${dd}/${mm}/${yy} às ${hh}:${mi}:${ss}`;
 }
 
+async function compressImage(file: File, maxWidth = 1200, quality = 0.75): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) { resolve(file); return; }
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 function SavedBadge({ savedAt }: { savedAt: string | null }) {
   if (!savedAt) return null;
   return <span className="text-[12px] text-[#22c55e]">✓ Salvo em {savedAt}</span>;
@@ -303,13 +328,14 @@ export function PurchaseForm({
                   accept="image/*"
 
                   className="hidden"
-                  onChange={e => {
+                  onChange={async e => {
                     const file = e.target.files?.[0] ?? null;
-                    setFotoFile(file);
                     if (file) {
-                      const url = URL.createObjectURL(file);
-                      setFotoPreview(url);
+                      const compressed = await compressImage(file);
+                      setFotoFile(compressed);
+                      setFotoPreview(URL.createObjectURL(compressed));
                     } else {
+                      setFotoFile(null);
                       setFotoPreview(null);
                     }
                   }}
@@ -507,10 +533,18 @@ function EditPanel({
   setConfirmDelete: (v: boolean) => void;
 }) {
   const [fotoPreview, setFotoPreview] = useState<string | null>(item.foto_url);
+  const [compressedFoto, setCompressedFoto] = useState<File | null>(null);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    onSave(new FormData(e.currentTarget));
+    const fd = new FormData(e.currentTarget);
+    // replace raw file with compressed version if available
+    if (compressedFoto) {
+      fd.set("foto", compressedFoto);
+    } else {
+      fd.delete("foto");
+    }
+    onSave(fd);
   }
 
   return (
@@ -575,9 +609,13 @@ function EditPanel({
               accept="image/*"
 
               className="hidden"
-              onChange={e => {
+              onChange={async e => {
                 const f = e.target.files?.[0];
-                if (f) setFotoPreview(URL.createObjectURL(f));
+                if (f) {
+                  const compressed = await compressImage(f);
+                  setCompressedFoto(compressed);
+                  setFotoPreview(URL.createObjectURL(compressed));
+                }
               }}
             />
             {fotoPreview ? (
