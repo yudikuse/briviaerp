@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useState, useEffect, useTransition, useCallback } from "react";
 import MoneyInput from "@/components/money-input";
 import DecimalInput from "@/components/decimal-input";
-import { savePurchase, updateProductPrice } from "./actions";
+import { savePurchase, updateProduct, deleteProduct } from "./actions";
 
 // ─── shared ────────────────────────────────────────────────────────────────────
 
@@ -485,20 +485,157 @@ export type StockItem = {
   foto_url: string | null;
 };
 
+// ─── shared edit panel (used by both Card and Row) ────────────────────────────
+
+const inputSm = "h-[44px] w-full rounded-[9px] bg-white px-3 text-[14px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]";
+
+function EditPanel({
+  item,
+  onSave,
+  onCancel,
+  onDelete,
+  pending,
+  confirmDelete,
+  setConfirmDelete,
+}: {
+  item: StockItem;
+  onSave: (fd: FormData) => void;
+  onCancel: () => void;
+  onDelete: () => void;
+  pending: boolean;
+  confirmDelete: boolean;
+  setConfirmDelete: (v: boolean) => void;
+}) {
+  const [fotoPreview, setFotoPreview] = useState<string | null>(item.foto_url);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    onSave(new FormData(e.currentTarget));
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3 rounded-[12px] bg-[#f6f7f9] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a2b3]">
+        Editar produto
+      </p>
+
+      <div className="grid gap-3 grid-cols-2">
+        {/* nome */}
+        <div className="col-span-2 space-y-1">
+          <p className="text-[11px] font-medium text-[#667085]">Nome</p>
+          <input name="nome" defaultValue={item.nome} required className={inputSm} />
+        </div>
+
+        {/* cor */}
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-[#667085]">Cor</p>
+          <input name="cor" defaultValue={item.cor ?? ""} placeholder="Ex: Preto" className={inputSm} />
+        </div>
+
+        {/* tamanho */}
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-[#667085]">Tamanho</p>
+          <select name="tamanho" defaultValue={item.tamanho ?? ""} className={inputSm}>
+            <option value="">—</option>
+            {["PP","P","M","G","GG","XG"].map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        {/* custo */}
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-[#667085]">Custo unit. (R$)</p>
+          <MoneyInput
+            name="custo_unitario"
+            prefix="R$"
+            wrapperClassName="w-full"
+            className={inputSm + " pl-8"}
+            defaultValue={item.custo_unitario > 0 ? item.custo_unitario.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
+          />
+        </div>
+
+        {/* preço de venda */}
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-[#667085]">Preço de venda (R$)</p>
+          <MoneyInput
+            name="preco_atual"
+            prefix="R$"
+            wrapperClassName="w-full"
+            className={inputSm + " pl-8"}
+            defaultValue={item.preco_atual > 0 ? item.preco_atual.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
+          />
+        </div>
+
+        {/* foto */}
+        <div className="col-span-2 space-y-1">
+          <p className="text-[11px] font-medium text-[#667085]">Foto</p>
+          <label className="flex cursor-pointer items-center gap-3 rounded-[9px] border border-dashed border-[#e7ebf0] bg-white p-3 hover:border-[#cfd8e3]">
+            <input
+              type="file"
+              name="foto"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) setFotoPreview(URL.createObjectURL(f));
+              }}
+            />
+            {fotoPreview ? (
+              <img src={fotoPreview} alt="preview" className="h-[48px] w-[48px] rounded-[6px] object-cover shrink-0" />
+            ) : (
+              <div className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[6px] bg-[#f1f4f8] text-[20px]">📷</div>
+            )}
+            <p className="text-[12px] text-[#667085]">
+              {fotoPreview ? "Toque para trocar a foto" : "Tirar foto ou escolher da galeria"}
+            </p>
+          </label>
+        </div>
+      </div>
+
+      {/* action buttons */}
+      <div className="flex items-center justify-between gap-2 pt-1">
+        {/* delete */}
+        {confirmDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[12px] text-[#ef4444] font-medium">Confirmar exclusão?</span>
+            <button type="button" onClick={onDelete} disabled={pending}
+              className="h-[36px] rounded-[8px] bg-[#ef4444] px-3 text-[12px] font-medium text-white disabled:opacity-50">
+              Sim, excluir
+            </button>
+            <button type="button" onClick={() => setConfirmDelete(false)}
+              className="h-[36px] rounded-[8px] px-3 text-[12px] text-[#667085] hover:bg-[#e7ebf0]">
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)}
+            className="h-[36px] rounded-[8px] px-3 text-[12px] font-medium text-[#ef4444] hover:bg-[#fee2e2]">
+            🗑 Excluir
+          </button>
+        )}
+
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel}
+            className="h-[40px] rounded-[9px] border border-[#e7ebf0] px-4 text-[13px] text-[#667085] hover:bg-white">
+            Cancelar
+          </button>
+          <button type="submit" disabled={pending}
+            className="h-[40px] rounded-[9px] bg-[#111827] px-4 text-[13px] font-medium text-white disabled:opacity-50">
+            {pending ? "Salvando..." : "Salvar"}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+// ─── StockCard (mobile) ───────────────────────────────────────────────────────
+
 function StockCard({ item }: { item: StockItem }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    fd.set("id", item.id);
-    startTransition(() => { updateProductPrice(fd); });
-    await new Promise(r => setTimeout(r, 700));
-    setEditing(false);
-    setSavedAt(nowDateTime());
-  }
 
   const margem = item.preco_atual > 0
     ? ((item.preco_atual - item.custo_unitario) / item.preco_atual) * 100
@@ -510,21 +647,25 @@ function StockCard({ item }: { item: StockItem }) {
     ? "bg-[#fef3c7] text-[#d97706]"
     : "bg-[#dcfce7] text-[#166534]";
 
+  async function handleSave(fd: FormData) {
+    fd.set("id", item.id);
+    startTransition(() => { updateProduct(fd); });
+    await new Promise(r => setTimeout(r, 800));
+    setEditing(false);
+    setSavedAt(nowDateTime());
+  }
+
+  async function handleDelete() {
+    startTransition(() => { deleteProduct(item.id); });
+  }
+
   return (
     <div className="border-b border-[#f1f4f8] p-4 last:border-0">
-      {/* top row */}
       <div className="flex items-start justify-between gap-2">
-        {/* foto thumbnail */}
         {item.foto_url ? (
-          <img
-            src={item.foto_url}
-            alt={item.nome}
-            className="h-[56px] w-[56px] shrink-0 rounded-[8px] object-cover"
-          />
+          <img src={item.foto_url} alt={item.nome} className="h-[56px] w-[56px] shrink-0 rounded-[8px] object-cover" />
         ) : (
-          <div className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-[8px] bg-[#f1f4f8] text-[22px]">
-            👗
-          </div>
+          <div className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-[8px] bg-[#f1f4f8] text-[22px]">👗</div>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -540,70 +681,52 @@ function StockCard({ item }: { item: StockItem }) {
             </p>
           )}
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-[11px] text-[#98a2b3]">Margem</p>
-          <p className="text-[14px] font-semibold text-[#111827]">{pct(margem)}</p>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="text-right">
+            <p className="text-[11px] text-[#98a2b3]">Margem</p>
+            <p className="text-[14px] font-semibold text-[#111827]">{pct(margem)}</p>
+          </div>
+          <button type="button" onClick={() => { setEditing(v => !v); setConfirmDelete(false); }}
+            className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] text-[14px] text-[#98a2b3] hover:bg-[#f1f4f8] hover:text-[#111827]">
+            {editing ? "✕" : "✏️"}
+          </button>
+          {savedAt && <span className="text-[10px] text-[#22c55e]">✓</span>}
         </div>
       </div>
 
-      {/* bottom row */}
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex gap-4">
-          <div>
-            <p className="text-[10px] text-[#98a2b3] uppercase tracking-wide">Custo</p>
-            <p className="text-[13px] font-medium text-[#667085]">{brl(item.custo_unitario)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-[#98a2b3] uppercase tracking-wide">Venda</p>
-            {editing ? (
-              <form onSubmit={handleSubmit} className="flex items-center gap-1 mt-0.5">
-                <MoneyInput
-                  name="preco_atual"
-                  prefix="R$"
-                  defaultValue={item.preco_atual > 0 ? item.preco_atual.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
-                  className="h-[40px] w-[110px] rounded-[9px] bg-white pl-8 pr-2 text-[15px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
-                />
-                <button type="submit" disabled={pending}
-                  className="h-[40px] w-[40px] rounded-[9px] bg-[#111827] text-[13px] text-white disabled:opacity-50 flex items-center justify-center">
-                  {pending ? "·" : "✓"}
-                </button>
-                <button type="button" onClick={() => setEditing(false)}
-                  className="h-[40px] w-[40px] rounded-[9px] text-[13px] text-[#667085] hover:bg-[#f1f4f8] flex items-center justify-center">
-                  ✕
-                </button>
-              </form>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <p className="text-[13px] font-semibold text-[#111827]">{brl(item.preco_atual)}</p>
-                <button type="button" onClick={() => setEditing(true)}
-                  className="flex h-[32px] w-[32px] items-center justify-center rounded-[8px] text-[14px] text-[#98a2b3] hover:bg-[#f1f4f8] hover:text-[#111827]">
-                  ✏️
-                </button>
-                {savedAt && <span className="text-[10px] text-[#22c55e]">✓</span>}
-              </div>
-            )}
-          </div>
+      <div className="mt-2 flex gap-4">
+        <div>
+          <p className="text-[10px] text-[#98a2b3] uppercase tracking-wide">Custo</p>
+          <p className="text-[13px] font-medium text-[#667085]">{brl(item.custo_unitario)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-[#98a2b3] uppercase tracking-wide">Venda</p>
+          <p className="text-[13px] font-semibold text-[#111827]">{brl(item.preco_atual)}</p>
         </div>
       </div>
+
+      {editing && (
+        <EditPanel
+          item={item}
+          onSave={handleSave}
+          onCancel={() => { setEditing(false); setConfirmDelete(false); }}
+          onDelete={handleDelete}
+          pending={pending}
+          confirmDelete={confirmDelete}
+          setConfirmDelete={setConfirmDelete}
+        />
+      )}
     </div>
   );
 }
 
-// Desktop table row (lg+)
+// ─── StockRow (desktop) ───────────────────────────────────────────────────────
+
 function StockRow({ item }: { item: StockItem }) {
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<string | null>(null);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    fd.set("id", item.id);
-    startTransition(() => { updateProductPrice(fd); });
-    await new Promise(r => setTimeout(r, 700));
-    setEditing(false);
-    setSavedAt(nowDateTime());
-  }
 
   const margem = item.preco_atual > 0
     ? ((item.preco_atual - item.custo_unitario) / item.preco_atual) * 100
@@ -615,65 +738,67 @@ function StockRow({ item }: { item: StockItem }) {
     ? "text-[#f59e0b]"
     : "text-[#22c55e]";
 
+  async function handleSave(fd: FormData) {
+    fd.set("id", item.id);
+    startTransition(() => { updateProduct(fd); });
+    await new Promise(r => setTimeout(r, 800));
+    setEditing(false);
+    setSavedAt(nowDateTime());
+  }
+
+  async function handleDelete() {
+    startTransition(() => { deleteProduct(item.id); });
+  }
+
   return (
-    <tr className="border-t border-[#f1f4f8] hover:bg-[#fafbfc]">
-      <td className="px-4 py-3 text-[12px] font-mono text-[#667085]">{item.codigo}</td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          {item.foto_url ? (
-            <img
-              src={item.foto_url}
-              alt={item.nome}
-              className="h-[40px] w-[40px] shrink-0 rounded-[6px] object-cover"
-            />
-          ) : (
-            <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[6px] bg-[#f1f4f8] text-[18px]">
-              👗
-            </div>
-          )}
-          <div>
-            <div className="text-[13px] font-medium text-[#111827]">{item.nome}</div>
-            <div className="text-[11px] text-[#98a2b3]">
-              {[item.categoria, item.cor, item.tamanho].filter(Boolean).join(" · ")}
+    <>
+      <tr className={`border-t border-[#f1f4f8] ${editing ? "bg-[#fafbfc]" : "hover:bg-[#fafbfc]"}`}>
+        <td className="px-4 py-3 text-[12px] font-mono text-[#667085]">{item.codigo}</td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            {item.foto_url ? (
+              <img src={item.foto_url} alt={item.nome} className="h-[40px] w-[40px] shrink-0 rounded-[6px] object-cover" />
+            ) : (
+              <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[6px] bg-[#f1f4f8] text-[18px]">👗</div>
+            )}
+            <div>
+              <div className="text-[13px] font-medium text-[#111827]">{item.nome}</div>
+              <div className="text-[11px] text-[#98a2b3]">
+                {[item.categoria, item.cor, item.tamanho].filter(Boolean).join(" · ")}
+              </div>
             </div>
           </div>
-        </div>
-      </td>
-      <td className={`px-4 py-3 text-center text-[14px] font-semibold ${stockColor}`}>
-        {item.estoque_atual}
-      </td>
-      <td className="px-4 py-3 text-[13px] text-[#667085]">{brl(item.custo_unitario)}</td>
-      <td className="px-4 py-3">
-        {editing ? (
-          <form onSubmit={handleSubmit} className="flex items-center gap-1">
-            <MoneyInput
-              name="preco_atual"
-              prefix="R$"
-              defaultValue={item.preco_atual > 0 ? item.preco_atual.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : ""}
-              className="h-[44px] w-[120px] rounded-[9px] bg-white pl-9 pr-2 text-[16px] text-[#111827] outline-none ring-1 ring-[#e7ebf0] focus:ring-2 focus:ring-[#cfd8e3]"
-            />
-            <button type="submit" disabled={pending}
-              className="h-[44px] rounded-[9px] bg-[#111827] px-3 text-[13px] text-white disabled:opacity-50">
-              {pending ? "..." : "OK"}
-            </button>
-            <button type="button" onClick={() => setEditing(false)}
-              className="h-[44px] rounded-[9px] px-3 text-[13px] text-[#667085] hover:bg-[#f1f4f8]">
-              ✕
-            </button>
-          </form>
-        ) : (
+        </td>
+        <td className={`px-4 py-3 text-center text-[14px] font-semibold ${stockColor}`}>{item.estoque_atual}</td>
+        <td className="px-4 py-3 text-[13px] text-[#667085]">{brl(item.custo_unitario)}</td>
+        <td className="px-4 py-3 text-[13px] font-medium text-[#111827]">{brl(item.preco_atual)}</td>
+        <td className="px-4 py-3 text-[13px] text-[#667085]">{pct(margem)}</td>
+        <td className="px-4 py-3">
           <div className="flex items-center gap-1">
-            <span className="text-[13px] font-medium text-[#111827]">{brl(item.preco_atual)}</span>
-            <button type="button" onClick={() => setEditing(true)}
-              className="h-[36px] w-[36px] flex items-center justify-center rounded-[8px] text-[14px] text-[#98a2b3] hover:text-[#111827] hover:bg-[#f1f4f8]">
-              ✏️
+            <button type="button" onClick={() => { setEditing(v => !v); setConfirmDelete(false); }}
+              className="flex h-[36px] w-[36px] items-center justify-center rounded-[8px] text-[14px] text-[#98a2b3] hover:bg-[#f1f4f8] hover:text-[#111827]">
+              {editing ? "✕" : "✏️"}
             </button>
             {savedAt && <span className="text-[10px] text-[#22c55e]">✓</span>}
           </div>
-        )}
-      </td>
-      <td className="px-4 py-3 text-[13px] text-[#667085]">{pct(margem)}</td>
-    </tr>
+        </td>
+      </tr>
+      {editing && (
+        <tr className="border-t border-[#f1f4f8] bg-[#fafbfc]">
+          <td colSpan={7} className="px-4 pb-4">
+            <EditPanel
+              item={item}
+              onSave={handleSave}
+              onCancel={() => { setEditing(false); setConfirmDelete(false); }}
+              onDelete={handleDelete}
+              pending={pending}
+              confirmDelete={confirmDelete}
+              setConfirmDelete={setConfirmDelete}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
@@ -712,7 +837,7 @@ export function StockTable({ items }: { items: StockItem[] }) {
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  {["Código", "Produto", "Estoque", "Custo", "Preço venda", "Margem"].map(h => (
+                  {["Código", "Produto", "Estoque", "Custo", "Preço venda", "Margem", ""].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a2b3]">
                       {h}
                     </th>
