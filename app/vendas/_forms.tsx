@@ -47,6 +47,7 @@ export type ProductOption = {
   despesa_peca_rs: number;
   preco_atual: number;
   estoque_atual: number;
+  foto_url: string | null;
 };
 
 export type SaleRecord = {
@@ -116,9 +117,21 @@ function ProductSearch({
                 setQuery("");
                 setOpen(false);
               }}
-              className="flex w-full items-center justify-between px-4 py-3 text-left transition hover:bg-[#f6f7f9] active:bg-[#edf0f4]"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#f6f7f9] active:bg-[#edf0f4]"
             >
-              <div className="min-w-0">
+              {/* foto thumbnail */}
+              {p.foto_url ? (
+                <img
+                  src={p.foto_url}
+                  alt={p.nome}
+                  className="h-[48px] w-[48px] shrink-0 rounded-[8px] object-cover"
+                />
+              ) : (
+                <div className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[8px] bg-[#f1f4f8] text-[20px]">
+                  👗
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[11px] font-mono text-[#98a2b3]">{p.codigo}</span>
                   {p.tamanho && (
