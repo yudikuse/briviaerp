@@ -95,7 +95,7 @@ export async function savePurchase(formData: FormData) {
     .from("products")
     .select("id, foto_url")
     .eq("codigo", codigo)
-    .single();
+    .maybeSingle();
 
   let productId: string;
 
@@ -194,9 +194,11 @@ export async function updateProduct(formData: FormData) {
   const custoUnitario = parseMoney2(formData.get("custo_unitario"));
   const precoAtual = parseMoney2(formData.get("preco_atual"));
 
+  // handle foto upload
   const fotoFile = formData.get("foto");
   let fotoUrl: string | null = null;
   if (fotoFile instanceof File && fotoFile.size > 0) {
+    // get current codigo for filename
     const { data: prod } = await supabaseAdmin
       .from("products")
       .select("codigo")
@@ -225,6 +227,7 @@ export async function updateProduct(formData: FormData) {
 
 export async function deleteProduct(id: string) {
   if (!id) return;
+  // Soft delete — mantém o histórico de compras e vendas intacto
   await supabaseAdmin
     .from("products")
     .update({ ativo: false, updated_at: new Date().toISOString() })
