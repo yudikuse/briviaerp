@@ -82,6 +82,7 @@ export default async function ComprasPage() {
     preco_atual: Number(p.preco_atual ?? 0),
     preco_sugerido: Number(p.preco_sugerido ?? 0),
     estoque_atual: (purchased[p.id] ?? 0) - (sold[p.id] ?? 0),
+    foto_url: p.foto_url ?? null,
   }));
 
   // Summary metrics
