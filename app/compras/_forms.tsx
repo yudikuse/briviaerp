@@ -140,6 +140,8 @@ export function PurchaseForm({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [customCategoria, setCustomCategoria] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
 
   // pricing state
   const modo = (settings?.pricing_mode ?? "MARKUP") as "MARKUP" | "MARGEM";
@@ -199,6 +201,7 @@ export function PurchaseForm({
     Object.entries(formData).forEach(([k, v]) => all.set(k, v));
     // merge step 3 fields
     fd.forEach((v, k) => all.set(k, v));
+    if (fotoFile) all.set("foto", fotoFile);
     all.set("preco_sugerido", String(result.sugerido));
     all.set("preco_final", String(parsePtBr(precoFinalStr)));
     startTransition(() => { savePurchase(all); });
@@ -208,6 +211,8 @@ export function PurchaseForm({
     setStep(1);
     setUserEditedFinal(false);
     setCusto(0);
+    setFotoFile(null);
+    setFotoPreview(null);
   }
 
   const steps = [
@@ -290,6 +295,50 @@ export function PurchaseForm({
             </FieldBlock>
             <FieldBlock label="Fornecedor">
               <input name="fornecedor" defaultValue={formData.fornecedor || ""} placeholder="Nome do fornecedor" className={inputBase} />
+            </FieldBlock>
+            <FieldBlock label="Foto do produto" span2>
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-[#e7ebf0] bg-[#f6f7f9] p-4 transition hover:border-[#cfd8e3] hover:bg-[#edf0f4]">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0] ?? null;
+                    setFotoFile(file);
+                    if (file) {
+                      const url = URL.createObjectURL(file);
+                      setFotoPreview(url);
+                    } else {
+                      setFotoPreview(null);
+                    }
+                  }}
+                />
+                {fotoPreview ? (
+                  <div className="relative">
+                    <img
+                      src={fotoPreview}
+                      alt="Preview"
+                      className="h-[140px] w-auto max-w-full rounded-[8px] object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={e => { e.preventDefault(); setFotoFile(null); setFotoPreview(null); }}
+                      className="absolute -right-2 -top-2 flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#ef4444] text-[12px] text-white shadow"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-[28px]">📷</span>
+                    <p className="text-center text-[13px] font-medium text-[#667085]">
+                      Tirar foto ou escolher da galeria
+                    </p>
+                    <p className="text-[11px] text-[#98a2b3]">Opcional — ajuda na identificação na hora da venda</p>
+                  </>
+                )}
+              </label>
             </FieldBlock>
           </div>
           <button type="submit"
@@ -433,6 +482,7 @@ export type StockItem = {
   preco_atual: number;
   preco_sugerido: number;
   estoque_atual: number;
+  foto_url: string | null;
 };
 
 function StockCard({ item }: { item: StockItem }) {
@@ -464,6 +514,18 @@ function StockCard({ item }: { item: StockItem }) {
     <div className="border-b border-[#f1f4f8] p-4 last:border-0">
       {/* top row */}
       <div className="flex items-start justify-between gap-2">
+        {/* foto thumbnail */}
+        {item.foto_url ? (
+          <img
+            src={item.foto_url}
+            alt={item.nome}
+            className="h-[56px] w-[56px] shrink-0 rounded-[8px] object-cover"
+          />
+        ) : (
+          <div className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-[8px] bg-[#f1f4f8] text-[22px]">
+            👗
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-mono text-[#98a2b3]">{item.codigo}</span>
@@ -557,9 +619,24 @@ function StockRow({ item }: { item: StockItem }) {
     <tr className="border-t border-[#f1f4f8] hover:bg-[#fafbfc]">
       <td className="px-4 py-3 text-[12px] font-mono text-[#667085]">{item.codigo}</td>
       <td className="px-4 py-3">
-        <div className="text-[13px] font-medium text-[#111827]">{item.nome}</div>
-        <div className="text-[11px] text-[#98a2b3]">
-          {[item.categoria, item.cor, item.tamanho].filter(Boolean).join(" · ")}
+        <div className="flex items-center gap-3">
+          {item.foto_url ? (
+            <img
+              src={item.foto_url}
+              alt={item.nome}
+              className="h-[40px] w-[40px] shrink-0 rounded-[6px] object-cover"
+            />
+          ) : (
+            <div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[6px] bg-[#f1f4f8] text-[18px]">
+              👗
+            </div>
+          )}
+          <div>
+            <div className="text-[13px] font-medium text-[#111827]">{item.nome}</div>
+            <div className="text-[11px] text-[#98a2b3]">
+              {[item.categoria, item.cor, item.tamanho].filter(Boolean).join(" · ")}
+            </div>
+          </div>
         </div>
       </td>
       <td className={`px-4 py-3 text-center text-[14px] font-semibold ${stockColor}`}>
