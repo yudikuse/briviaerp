@@ -301,7 +301,7 @@ export function PurchaseForm({
                 <input
                   type="file"
                   accept="image/*"
-                  capture="environment"
+
                   className="hidden"
                   onChange={e => {
                     const file = e.target.files?.[0] ?? null;
@@ -573,7 +573,7 @@ function EditPanel({
               type="file"
               name="foto"
               accept="image/*"
-              capture="environment"
+
               className="hidden"
               onChange={e => {
                 const f = e.target.files?.[0];
