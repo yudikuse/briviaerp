@@ -81,6 +81,7 @@ export default async function VendasPage() {
       despesa_peca_rs: Number(p.despesa_peca_rs ?? 0),
       preco_atual: Number(p.preco_atual ?? 0),
       estoque_atual: (purchased[p.id] ?? 0) - (sold[p.id] ?? 0),
+      foto_url: p.foto_url ?? null,
     }))
     .filter((p) => p.estoque_atual > 0);
 
