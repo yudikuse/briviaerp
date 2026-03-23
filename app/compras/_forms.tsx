@@ -459,17 +459,18 @@ export function PurchaseForm({
           </div>
 
           <FieldBlock label="Preço de venda final">
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-[16px] text-[#667085] pointer-events-none">R$</span>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={precoFinalStr}
-                onChange={e => { setUserEditedFinal(true); setPrecoFinalStr(e.target.value.replace(/[^0-9,.]/g, "")); }}
-                placeholder={brl(result.sugerido).replace("R$\u00a0", "")}
-                className={`${inputBase} pl-10`}
-              />
-            </div>
+            <MoneyInput
+              name="preco_final_display"
+              prefix="R$"
+              wrapperClassName="w-full"
+              className={inputBase}
+              value={precoFinalStr}
+              onChange={(v: number) => {
+                setUserEditedFinal(true);
+                setPrecoFinalStr(v > 0 ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
+              }}
+              placeholder={result.sugerido > 0 ? result.sugerido.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "0,00"}
+            />
             {userEditedFinal && result.sugerido > 0 && (
               <button type="button" onClick={() => setUserEditedFinal(false)}
                 className="mt-1 text-[12px] text-[#667085] underline underline-offset-2 hover:text-[#111827]">
