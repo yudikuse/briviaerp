@@ -12,34 +12,34 @@ type MoneyInputProps = {
   onChange?: (value: number) => void;
 };
 
-function ptBrToFloat(s: string): number {
-  if (!s) return 0;
-  const n = parseFloat(s.replace(/\./g, "").replace(",", "."));
-  return Number.isFinite(n) ? n : 0;
-}
-
-function formatPtBr(n: number): string {
-  return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
 /**
- * Formata o raw em tempo real:
- *  - sem vírgula : adiciona separador de milhar  → "2122" → "2.122"
- *  - com vírgula : formata parte inteira + decimal → "2122,9" → "2.122,9"
- *  - no blur     : completa 2 casas decimais       → "2.122" → "2.122,00"
+ * Digit-streaming: os dígitos entram pela direita, separador decimal fixo em 2 casas.
+ *   "4"    → 0,04
+ *   "44"   → 0,44
+ *   "444"  → 4,44
+ *   "4490" → 44,90   ← para R$44,90 digite 4490
+ *
+ * inputMode="decimal" mostra teclado com vírgula no iOS.
+ * A vírgula aparece desde o primeiro dígito digitado.
  */
-function formatLive(raw: string): string {
-  if (!raw) return "";
-  const ci = raw.indexOf(",");
-  if (ci === -1) {
-    const n = parseInt(raw.replace(/\D/g, ""), 10);
-    return n > 0 ? n.toLocaleString("pt-BR") : raw;
-  }
-  const intStr = raw.slice(0, ci).replace(/\D/g, "");
-  const decStr = raw.slice(ci + 1);
-  const intNum = parseInt(intStr, 10) || 0;
-  const intFmt = intNum > 0 ? intNum.toLocaleString("pt-BR") : (intStr || "0");
-  return `${intFmt},${decStr}`;
+
+function initialDigits(s: string): string {
+  if (!s) return "";
+  const lastComma = s.lastIndexOf(",");
+  const intPart = lastComma === -1 ? s : s.slice(0, lastComma);
+  const decPart = lastComma === -1 ? "00" : s.slice(lastComma + 1);
+  const cleanInt = intPart.replace(/\D/g, "");
+  const cleanDec = decPart.replace(/\D/g, "").slice(0, 2).padEnd(2, "0");
+  return (cleanInt + cleanDec).replace(/^0+/, "");
+}
+
+function digitsToDisplay(digits: string): string {
+  if (!digits) return "";
+  const value = Number(digits) / 100;
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 export default function MoneyInput({
@@ -51,30 +51,15 @@ export default function MoneyInput({
   prefix,
   onChange,
 }: MoneyInputProps) {
-  const [raw, setRaw] = useState<string>(defaultValue || "");
+  const [digits, setDigits] = useState<string>(() => initialDigits(defaultValue));
 
-  const displayStr = formatLive(raw);
+  const displayValue = digitsToDisplay(digits);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    let val = e.target.value;
-    val = val.replace(/\./g, "");            // remove separadores de milhar que inserimos
-    val = val.replace(/[^\d,]/g, "");        // só dígitos e vírgula
-    // apenas uma vírgula
-    const ci = val.indexOf(",");
-    if (ci !== -1) val = val.slice(0, ci + 1) + val.slice(ci + 1).replace(/,/g, "");
-    // máximo 2 casas decimais
-    const parts = val.split(",");
-    if (parts.length === 2) val = parts[0] + "," + parts[1].slice(0, 2);
-    // sem zeros à esquerda
-    val = val.replace(/^0+(\d)/, "$1");
-
-    setRaw(val);
-    onChange?.(ptBrToFloat(val));
-  }
-
-  function handleBlur() {
-    const n = ptBrToFloat(raw);
-    if (n > 0) setRaw(formatPtBr(n)); // completa ",00" se não tiver
+    const onlyNums = e.target.value.replace(/\D/g, "");
+    const trimmed = onlyNums.replace(/^0+/, "");
+    setDigits(trimmed);
+    if (onChange) onChange(Number(trimmed) / 100);
   }
 
   return (
@@ -91,9 +76,8 @@ export default function MoneyInput({
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
-        value={displayStr}
+        value={displayValue}
         onChange={handleChange}
-        onBlur={handleBlur}
         className={`${className} ${prefix ? "pl-10" : ""}`}
       />
     </div>
