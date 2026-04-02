@@ -13,6 +13,37 @@ type MoneyInputProps = {
   onChange?: (value: number) => void;
 };
 
+/**
+ * Converts a pt-BR formatted string (e.g. "1.234,56") into a raw digit string
+ * representing cents (e.g. "123456"). Used only for initialisation from defaultValue.
+ */
+function initialDigits(s: string): string {
+  if (!s) return "";
+  const lastComma = s.lastIndexOf(",");
+  let intPart: string;
+  let decPart: string;
+  if (lastComma === -1) {
+    intPart = s;
+    decPart = "00";
+  } else {
+    intPart = s.slice(0, lastComma);
+    decPart = s.slice(lastComma + 1);
+  }
+  const cleanInt = intPart.replace(/\D/g, "");
+  const cleanDec = decPart.replace(/\D/g, "").slice(0, 2).padEnd(2, "0");
+  return (cleanInt + cleanDec).replace(/^0+/, "");
+}
+
+/** Formats a raw digit string (cents) into a pt-BR display string. */
+function digitsToDisplay(digits: string): string {
+  if (!digits) return "";
+  const value = Number(digits) / 100;
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function MoneyInput({
   name,
   defaultValue = "",
@@ -23,45 +54,22 @@ export default function MoneyInput({
   prefix,
   onChange,
 }: MoneyInputProps) {
-  const [rawStr, setRawStr] = useState<string>(defaultValue || "");
+  const [digits, setDigits] = useState<string>(() => initialDigits(defaultValue));
 
-  const displayStr = value !== undefined ? value : rawStr;
+  // When `value` is provided externally, parse it fresh each render.
+  // Otherwise use internal digit state.
+  const displayValue =
+    value !== undefined
+      ? digitsToDisplay(initialDigits(value))
+      : digitsToDisplay(digits);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    let val = e.target.value;
-
-    // Remove thousand-separator dots that we inserted ourselves
-    val = val.replace(/\./g, "");
-    // Keep only digits and comma
-    val = val.replace(/[^\d,]/g, "");
-
-    const commaIdx = val.indexOf(",");
-    let newDisplay: string;
-    let numericValue: number;
-
-    if (commaIdx === -1) {
-      // No comma yet — show as integer with thousand separators
-      const digits = val.replace(/^0+/, "");
-      if (!digits) {
-        newDisplay = "";
-        numericValue = 0;
-      } else {
-        numericValue = parseInt(digits, 10);
-        newDisplay = numericValue.toLocaleString("pt-BR");
-      }
-    } else {
-      // Comma present — natural decimal entry: "49,90", "1.349,90"
-      const intStr = val.slice(0, commaIdx).replace(/^0+/, "") || "0";
-      // Only keep the first comma, limit decimal to 2 digits
-      const decStr = val.slice(commaIdx + 1).replace(/,/g, "").slice(0, 2);
-      const intNum = parseInt(intStr, 10) || 0;
-      const intFormatted = intNum.toLocaleString("pt-BR");
-      newDisplay = `${intFormatted},${decStr}`;
-      numericValue = parseFloat(`${intStr}.${decStr.padEnd(2, "0")}`) || 0;
-    }
-
-    if (value === undefined) setRawStr(newDisplay);
-    if (onChange) onChange(numericValue);
+    // Strip everything except digits (comma/period are decimal separators
+    // the user types visually, but the streaming approach just needs digits).
+    const onlyNums = e.target.value.replace(/\D/g, "");
+    const trimmed = onlyNums.replace(/^0+/, "");
+    if (value === undefined) setDigits(trimmed);
+    if (onChange) onChange(Number(trimmed) / 100);
   }
 
   return (
@@ -74,11 +82,11 @@ export default function MoneyInput({
       <input
         name={name}
         type="text"
-        inputMode="decimal"
+        inputMode="decimal"   /* decimal keyboard on iOS — shows comma/period key */
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
-        value={displayStr}
+        value={displayValue}
         onChange={handleChange}
         className={`${className} ${prefix ? "pl-10" : ""}`}
       />
