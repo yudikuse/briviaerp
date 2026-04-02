@@ -5,7 +5,6 @@ import { useState } from "react";
 type MoneyInputProps = {
   name: string;
   defaultValue?: string;
-  value?: string;
   className?: string;
   wrapperClassName?: string;
   placeholder?: string;
@@ -13,63 +12,68 @@ type MoneyInputProps = {
   onChange?: (value: number) => void;
 };
 
+function ptBrToFloat(s: string): number {
+  if (!s) return 0;
+  const n = parseFloat(s.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatPtBr(n: number): string {
+  return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /**
- * Converts a pt-BR formatted string (e.g. "1.234,56") into a raw digit string
- * representing cents (e.g. "123456"). Used only for initialisation from defaultValue.
+ * MoneyInput — entrada natural pt-BR.
+ *
+ * Comportamento:
+ *  - Com foco  : mostra o que o usuário está digitando (ex: "44" ou "44,9")
+ *  - Sem foco  : formata automaticamente com 2 casas decimais (ex: "44,00")
+ *  - "44"  → R$ 44,00   (NÃO digit-streaming; 44 reais, não 44 centavos)
+ *  - "44,9" → R$ 44,90
+ *  - "1349" → R$ 1.349,00 (separador de milhar aplicado no blur)
  */
-function initialDigits(s: string): string {
-  if (!s) return "";
-  const lastComma = s.lastIndexOf(",");
-  let intPart: string;
-  let decPart: string;
-  if (lastComma === -1) {
-    intPart = s;
-    decPart = "00";
-  } else {
-    intPart = s.slice(0, lastComma);
-    decPart = s.slice(lastComma + 1);
-  }
-  const cleanInt = intPart.replace(/\D/g, "");
-  const cleanDec = decPart.replace(/\D/g, "").slice(0, 2).padEnd(2, "0");
-  return (cleanInt + cleanDec).replace(/^0+/, "");
-}
-
-/** Formats a raw digit string (cents) into a pt-BR display string. */
-function digitsToDisplay(digits: string): string {
-  if (!digits) return "";
-  const value = Number(digits) / 100;
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
 export default function MoneyInput({
   name,
   defaultValue = "",
-  value,
   className = "",
   wrapperClassName = "",
   placeholder = "0,00",
   prefix,
   onChange,
 }: MoneyInputProps) {
-  const [digits, setDigits] = useState<string>(() => initialDigits(defaultValue));
+  const [raw, setRaw] = useState<string>(defaultValue || "");
+  const [focused, setFocused] = useState(false);
 
-  // When `value` is provided externally, parse it fresh each render.
-  // Otherwise use internal digit state.
-  const displayValue =
-    value !== undefined
-      ? digitsToDisplay(initialDigits(value))
-      : digitsToDisplay(digits);
+  // Enquanto com foco mostra o raw (permite editar livremente).
+  // Sem foco formata com 2 casas decimais e separador de milhar.
+  const displayStr = (() => {
+    if (focused) return raw;
+    if (!raw) return "";
+    const n = ptBrToFloat(raw);
+    return n > 0 ? formatPtBr(n) : raw;
+  })();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    // Strip everything except digits (comma/period are decimal separators
-    // the user types visually, but the streaming approach just needs digits).
-    const onlyNums = e.target.value.replace(/\D/g, "");
-    const trimmed = onlyNums.replace(/^0+/, "");
-    if (value === undefined) setDigits(trimmed);
-    if (onChange) onChange(Number(trimmed) / 100);
+    let val = e.target.value;
+    val = val.replace(/\./g, "");           // remove separadores de milhar
+    val = val.replace(/[^\d,]/g, "");       // mantém apenas dígitos e vírgula
+    // apenas uma vírgula
+    const ci = val.indexOf(",");
+    if (ci !== -1) val = val.slice(0, ci + 1) + val.slice(ci + 1).replace(/,/g, "");
+    // máximo 2 casas decimais
+    const parts = val.split(",");
+    if (parts.length === 2) val = parts[0] + "," + parts[1].slice(0, 2);
+    // sem zeros à esquerda na parte inteira (exceto "0,xx")
+    val = val.replace(/^0+(\d)/, "$1");
+
+    setRaw(val);
+    onChange?.(ptBrToFloat(val));
+  }
+
+  function handleBlur() {
+    setFocused(false);
+    const n = ptBrToFloat(raw);
+    if (n > 0) setRaw(formatPtBr(n)); // formata no blur: "44" → "44,00"
   }
 
   return (
@@ -82,12 +86,14 @@ export default function MoneyInput({
       <input
         name={name}
         type="text"
-        inputMode="decimal"   /* decimal keyboard on iOS — shows comma/period key */
+        inputMode="decimal"
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
-        value={displayValue}
+        value={displayStr}
+        onFocus={() => setFocused(true)}
         onChange={handleChange}
+        onBlur={handleBlur}
         className={`${className} ${prefix ? "pl-10" : ""}`}
       />
     </div>
