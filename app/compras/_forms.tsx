@@ -15,7 +15,7 @@ const CATEGORIAS = [
   "Vestidos", "Conjuntos", "Blusas", "Calças", "Saias",
   "Shorts", "Jaquetas", "Macacões", "Outros",
 ];
-const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG"];
+const TAMANHOS = ["PP", "P", "M", "G", "GG", "XG", "Único"];
 
 function brl(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
