@@ -5,7 +5,6 @@ import { useState } from "react";
 type MoneyInputProps = {
   name: string;
   defaultValue?: string;
-  /** Pass this to make the component externally controlled (e.g. step 3 preço final). */
   value?: string;
   className?: string;
   wrapperClassName?: string;
@@ -13,17 +12,6 @@ type MoneyInputProps = {
   prefix?: string;
   onChange?: (value: number) => void;
 };
-
-/**
- * Parses a pt-BR formatted money string to a JS number.
- * "49,90" → 49.9  |  "1.234,56" → 1234.56  |  "50" → 50
- */
-function ptBrToFloat(s: string): number {
-  if (!s) return 0;
-  const normalized = s.replace(/\./g, "").replace(",", ".");
-  const n = parseFloat(normalized);
-  return Number.isFinite(n) ? n : 0;
-}
 
 export default function MoneyInput({
   name,
@@ -37,40 +25,43 @@ export default function MoneyInput({
 }: MoneyInputProps) {
   const [rawStr, setRawStr] = useState<string>(defaultValue || "");
 
-  // If caller provides `value`, they own the state; otherwise use internal rawStr
   const displayStr = value !== undefined ? value : rawStr;
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     let val = e.target.value;
 
-    // 1. Remove thousand-separator dots that come from the displayed value
+    // Remove thousand-separator dots that we inserted ourselves
     val = val.replace(/\./g, "");
-
-    // 2. Keep only digits and at most one comma
+    // Keep only digits and comma
     val = val.replace(/[^\d,]/g, "");
 
-    // 3. Only one comma allowed — keep the first one
-    const firstComma = val.indexOf(",");
-    if (firstComma !== -1) {
-      const before = val.slice(0, firstComma + 1);
-      const after = val.slice(firstComma + 1).replace(/,/g, "");
-      val = before + after;
+    const commaIdx = val.indexOf(",");
+    let newDisplay: string;
+    let numericValue: number;
+
+    if (commaIdx === -1) {
+      // No comma yet — show as integer with thousand separators
+      const digits = val.replace(/^0+/, "");
+      if (!digits) {
+        newDisplay = "";
+        numericValue = 0;
+      } else {
+        numericValue = parseInt(digits, 10);
+        newDisplay = numericValue.toLocaleString("pt-BR");
+      }
+    } else {
+      // Comma present — natural decimal entry: "49,90", "1.349,90"
+      const intStr = val.slice(0, commaIdx).replace(/^0+/, "") || "0";
+      // Only keep the first comma, limit decimal to 2 digits
+      const decStr = val.slice(commaIdx + 1).replace(/,/g, "").slice(0, 2);
+      const intNum = parseInt(intStr, 10) || 0;
+      const intFormatted = intNum.toLocaleString("pt-BR");
+      newDisplay = `${intFormatted},${decStr}`;
+      numericValue = parseFloat(`${intStr}.${decStr.padEnd(2, "0")}`) || 0;
     }
 
-    // 4. Split to enforce max-2 decimal digits
-    const parts = val.split(",");
-    const intPart = parts[0].replace(/^0+/, "") || (parts.length > 1 ? "0" : "");
-    const decPart = parts.length > 1 ? parts[1].slice(0, 2) : null;
-
-    val = decPart !== null ? `${intPart},${decPart}` : intPart;
-
-    // 5. Update internal state only in uncontrolled mode
-    if (value === undefined) {
-      setRawStr(val);
-    }
-
-    // 6. Fire onChange with the numeric value
-    if (onChange) onChange(ptBrToFloat(val));
+    if (value === undefined) setRawStr(newDisplay);
+    if (onChange) onChange(numericValue);
   }
 
   return (
@@ -80,7 +71,6 @@ export default function MoneyInput({
           {prefix}
         </span>
       ) : null}
-
       <input
         name={name}
         type="text"
