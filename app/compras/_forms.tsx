@@ -227,8 +227,10 @@ export function PurchaseForm({
     // merge step 3 fields
     fd.forEach((v, k) => all.set(k, v));
     if (fotoFile) all.set("foto", fotoFile);
-    all.set("preco_sugerido", String(result.sugerido));
-    all.set("preco_final", String(parsePtBr(precoFinalStr)));
+    // Pass pt-BR strings — parseDecimal in actions.ts strips ALL dots, so JS float
+    // "249.975" would become 249975 (absurdly wrong). pt-BR "249,98" is safe.
+    all.set("preco_sugerido", result.sugerido.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    all.set("preco_final", precoFinalStr || result.sugerido.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     // React 19: async startTransition properly awaits the server action so that
     // revalidatePath fires before we reset the form. The old fixed 900ms timeout
     // caused a race — if Supabase was slow the list wouldn't update.
@@ -577,7 +579,7 @@ function EditPanel({
           <p className="text-[11px] font-medium text-[#667085]">Tamanho</p>
           <select name="tamanho" defaultValue={item.tamanho ?? ""} className={inputSm}>
             <option value="">—</option>
-            {["PP","P","M","G","GG","XG"].map(t => <option key={t} value={t}>{t}</option>)}
+            {TAMANHOS.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
 
