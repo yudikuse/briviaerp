@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useState, useEffect, useTransition, useCallback } from "react";
 import MoneyInput from "@/components/money-input";
 import DecimalInput from "@/components/decimal-input";
-import { savePurchase, updateProduct, deleteProduct } from "./actions";
+import { savePurchase, updateProduct, deleteProduct, getNextCode } from "./actions";
 
 // ─── shared ────────────────────────────────────────────────────────────────────
 
@@ -167,9 +167,9 @@ export function PurchaseForm({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
-  // Incrementado após cada save — força remount do step 1 e limpa todos os
-  // campos uncontrolled (nome, categoria, cor, etc.) que o React NÃO reseta
-  // automaticamente em re-renders.
+  // nextCode prop vem do servidor mas fica stale após o save (revalidatePath não
+  // atualiza o prop imediatamente no cliente). Mantemos o código atualizado aqui.
+  const [currentNextCode, setCurrentNextCode] = useState(nextCode);
   const [formKey, setFormKey] = useState(0);
 
   // pricing state
@@ -240,6 +240,8 @@ export function PurchaseForm({
     // caused a race — if Supabase was slow the list wouldn't update.
     startTransition(async () => {
       await savePurchase(all);
+      const freshCode = await getNextCode();   // busca código atualizado — evita reusar código antigo
+      setCurrentNextCode(freshCode);
       setSavedAt(nowDateTime());
       setFormData({});
       setFormKey(k => k + 1);   // força remount do step 1 — limpa campos uncontrolled
@@ -294,7 +296,7 @@ export function PurchaseForm({
             <FieldBlock label="Código (automático)">
               <input
                 name="codigo"
-                defaultValue={formData.codigo || nextCode}
+                defaultValue={formData.codigo || currentNextCode}
                 readOnly
                 className={`${inputBase} bg-[#f6f7f9] text-[#667085] cursor-default`}
               />
