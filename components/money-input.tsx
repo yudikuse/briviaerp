@@ -5,6 +5,8 @@ import { useState } from "react";
 type MoneyInputProps = {
   name: string;
   defaultValue?: string;
+  /** Pass this to make the component externally controlled (e.g. step 3 preço final). */
+  value?: string;
   className?: string;
   wrapperClassName?: string;
   placeholder?: string;
@@ -13,74 +15,62 @@ type MoneyInputProps = {
 };
 
 /**
- * Converts the pt-BR formatted defaultValue (e.g. "1.234,56" or "1,40")
- * into a raw digits string used internally (e.g. "123456" or "140").
- *
- * Rules:
- *  - Remove thousand-separators (dots before the last comma)
- *  - Remove the comma
- *  - Result is cents as integer string: "1,40" → "140", "1.234,56" → "123456"
+ * Parses a pt-BR formatted money string to a JS number.
+ * "49,90" → 49.9  |  "1.234,56" → 1234.56  |  "50" → 50
  */
-function initialDigits(defaultValue: string): string {
-  if (!defaultValue) return "";
-
-  const trimmed = defaultValue.trim();
-  if (!trimmed) return "";
-
-  // Find last comma — that's the decimal separator in pt-BR
-  const lastComma = trimmed.lastIndexOf(",");
-
-  let intPart: string;
-  let decPart: string;
-
-  if (lastComma === -1) {
-    // No comma at all — treat as whole number with 00 cents
-    intPart = trimmed;
-    decPart = "00";
-  } else {
-    intPart = trimmed.slice(0, lastComma);
-    decPart = trimmed.slice(lastComma + 1);
-  }
-
-  // Strip dots (thousand separators) and non-digits from integer part
-  const cleanInt = intPart.replace(/\D/g, "");
-  // Pad/trim decimal part to exactly 2 digits
-  const cleanDec = decPart.replace(/\D/g, "").slice(0, 2).padEnd(2, "0");
-
-  const digits = cleanInt + cleanDec;
-
-  // Drop leading zeros but keep at least one digit
-  const trimmed2 = digits.replace(/^0+/, "") || "";
-  return trimmed2;
-}
-
-function digitsToDisplay(digits: string): string {
-  if (!digits) return "";
-  const value = Number(digits) / 100;
-  return value.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+function ptBrToFloat(s: string): number {
+  if (!s) return 0;
+  const normalized = s.replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(normalized);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export default function MoneyInput({
   name,
   defaultValue = "",
+  value,
   className = "",
   wrapperClassName = "",
   placeholder = "0,00",
   prefix,
   onChange,
 }: MoneyInputProps) {
-  const [digits, setDigits] = useState(() => initialDigits(defaultValue));
+  const [rawStr, setRawStr] = useState<string>(defaultValue || "");
 
-  const displayValue = digitsToDisplay(digits);
+  // If caller provides `value`, they own the state; otherwise use internal rawStr
+  const displayStr = value !== undefined ? value : rawStr;
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const onlyNums = e.target.value.replace(/\D/g, "");
-    const trimmed = onlyNums.replace(/^0+/, "");
-    setDigits(trimmed);
-    if (onChange) onChange(Number(trimmed) / 100);
+    let val = e.target.value;
+
+    // 1. Remove thousand-separator dots that come from the displayed value
+    val = val.replace(/\./g, "");
+
+    // 2. Keep only digits and at most one comma
+    val = val.replace(/[^\d,]/g, "");
+
+    // 3. Only one comma allowed — keep the first one
+    const firstComma = val.indexOf(",");
+    if (firstComma !== -1) {
+      const before = val.slice(0, firstComma + 1);
+      const after = val.slice(firstComma + 1).replace(/,/g, "");
+      val = before + after;
+    }
+
+    // 4. Split to enforce max-2 decimal digits
+    const parts = val.split(",");
+    const intPart = parts[0].replace(/^0+/, "") || (parts.length > 1 ? "0" : "");
+    const decPart = parts.length > 1 ? parts[1].slice(0, 2) : null;
+
+    val = decPart !== null ? `${intPart},${decPart}` : intPart;
+
+    // 5. Update internal state only in uncontrolled mode
+    if (value === undefined) {
+      setRawStr(val);
+    }
+
+    // 6. Fire onChange with the numeric value
+    if (onChange) onChange(ptBrToFloat(val));
   }
 
   return (
@@ -94,11 +84,11 @@ export default function MoneyInput({
       <input
         name={name}
         type="text"
-        inputMode="numeric"
+        inputMode="decimal"
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholder}
-        value={displayValue}
+        value={displayStr}
         onChange={handleChange}
         className={`${className} ${prefix ? "pl-10" : ""}`}
       />
