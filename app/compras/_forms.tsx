@@ -167,6 +167,10 @@ export function PurchaseForm({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [fotoFile, setFotoFile] = useState<File | null>(null);
   const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  // Incrementado após cada save — força remount do step 1 e limpa todos os
+  // campos uncontrolled (nome, categoria, cor, etc.) que o React NÃO reseta
+  // automaticamente em re-renders.
+  const [formKey, setFormKey] = useState(0);
 
   // pricing state
   const modo = (settings?.pricing_mode ?? "MARKUP") as "MARKUP" | "MARGEM";
@@ -238,6 +242,7 @@ export function PurchaseForm({
       await savePurchase(all);
       setSavedAt(nowDateTime());
       setFormData({});
+      setFormKey(k => k + 1);   // força remount do step 1 — limpa campos uncontrolled
       setStep(1);
       setUserEditedFinal(false);
       setCusto(0);
@@ -283,7 +288,7 @@ export function PurchaseForm({
 
       {/* ── step 1: dados do produto ── */}
       {step === 1 && (
-        <form onSubmit={handleStep1} className="space-y-4">
+        <form key={formKey} onSubmit={handleStep1} className="space-y-4">
           <SectionTitle>Dados do produto</SectionTitle>
           <div className="grid gap-4 md:grid-cols-2">
             <FieldBlock label="Código (automático)">
