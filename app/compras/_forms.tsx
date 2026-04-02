@@ -218,7 +218,7 @@ export function PurchaseForm({
   }
 
   // Step 3 → final submit
-  async function handleStep3(e: React.FormEvent<HTMLFormElement>) {
+  function handleStep3(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const all = new FormData();
@@ -229,15 +229,19 @@ export function PurchaseForm({
     if (fotoFile) all.set("foto", fotoFile);
     all.set("preco_sugerido", String(result.sugerido));
     all.set("preco_final", String(parsePtBr(precoFinalStr)));
-    startTransition(() => { savePurchase(all); });
-    await new Promise(r => setTimeout(r, 900));
-    setSavedAt(nowDateTime());
-    setFormData({});
-    setStep(1);
-    setUserEditedFinal(false);
-    setCusto(0);
-    setFotoFile(null);
-    setFotoPreview(null);
+    // React 19: async startTransition properly awaits the server action so that
+    // revalidatePath fires before we reset the form. The old fixed 900ms timeout
+    // caused a race — if Supabase was slow the list wouldn't update.
+    startTransition(async () => {
+      await savePurchase(all);
+      setSavedAt(nowDateTime());
+      setFormData({});
+      setStep(1);
+      setUserEditedFinal(false);
+      setCusto(0);
+      setFotoFile(null);
+      setFotoPreview(null);
+    });
   }
 
   const steps = [
@@ -460,11 +464,12 @@ export function PurchaseForm({
 
           <FieldBlock label="Preço de venda final">
             <MoneyInput
+              key={userEditedFinal ? "user-edited" : String(result.sugerido)}
               name="preco_final_display"
               prefix="R$"
               wrapperClassName="w-full"
               className={inputBase}
-              value={precoFinalStr}
+              defaultValue={precoFinalStr}
               onChange={(v: number) => {
                 setUserEditedFinal(true);
                 setPrecoFinalStr(v > 0 ? v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "");
