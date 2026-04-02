@@ -23,15 +23,25 @@ function formatPtBr(n: number): string {
 }
 
 /**
- * MoneyInput — entrada natural pt-BR.
- *
- * Comportamento:
- *  - Com foco  : mostra o que o usuário está digitando (ex: "44" ou "44,9")
- *  - Sem foco  : formata automaticamente com 2 casas decimais (ex: "44,00")
- *  - "44"  → R$ 44,00   (NÃO digit-streaming; 44 reais, não 44 centavos)
- *  - "44,9" → R$ 44,90
- *  - "1349" → R$ 1.349,00 (separador de milhar aplicado no blur)
+ * Formata o raw em tempo real:
+ *  - sem vírgula : adiciona separador de milhar  → "2122" → "2.122"
+ *  - com vírgula : formata parte inteira + decimal → "2122,9" → "2.122,9"
+ *  - no blur     : completa 2 casas decimais       → "2.122" → "2.122,00"
  */
+function formatLive(raw: string): string {
+  if (!raw) return "";
+  const ci = raw.indexOf(",");
+  if (ci === -1) {
+    const n = parseInt(raw.replace(/\D/g, ""), 10);
+    return n > 0 ? n.toLocaleString("pt-BR") : raw;
+  }
+  const intStr = raw.slice(0, ci).replace(/\D/g, "");
+  const decStr = raw.slice(ci + 1);
+  const intNum = parseInt(intStr, 10) || 0;
+  const intFmt = intNum > 0 ? intNum.toLocaleString("pt-BR") : (intStr || "0");
+  return `${intFmt},${decStr}`;
+}
+
 export default function MoneyInput({
   name,
   defaultValue = "",
@@ -42,28 +52,20 @@ export default function MoneyInput({
   onChange,
 }: MoneyInputProps) {
   const [raw, setRaw] = useState<string>(defaultValue || "");
-  const [focused, setFocused] = useState(false);
 
-  // Enquanto com foco mostra o raw (permite editar livremente).
-  // Sem foco formata com 2 casas decimais e separador de milhar.
-  const displayStr = (() => {
-    if (focused) return raw;
-    if (!raw) return "";
-    const n = ptBrToFloat(raw);
-    return n > 0 ? formatPtBr(n) : raw;
-  })();
+  const displayStr = formatLive(raw);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     let val = e.target.value;
-    val = val.replace(/\./g, "");           // remove separadores de milhar
-    val = val.replace(/[^\d,]/g, "");       // mantém apenas dígitos e vírgula
+    val = val.replace(/\./g, "");            // remove separadores de milhar que inserimos
+    val = val.replace(/[^\d,]/g, "");        // só dígitos e vírgula
     // apenas uma vírgula
     const ci = val.indexOf(",");
     if (ci !== -1) val = val.slice(0, ci + 1) + val.slice(ci + 1).replace(/,/g, "");
     // máximo 2 casas decimais
     const parts = val.split(",");
     if (parts.length === 2) val = parts[0] + "," + parts[1].slice(0, 2);
-    // sem zeros à esquerda na parte inteira (exceto "0,xx")
+    // sem zeros à esquerda
     val = val.replace(/^0+(\d)/, "$1");
 
     setRaw(val);
@@ -71,9 +73,8 @@ export default function MoneyInput({
   }
 
   function handleBlur() {
-    setFocused(false);
     const n = ptBrToFloat(raw);
-    if (n > 0) setRaw(formatPtBr(n)); // formata no blur: "44" → "44,00"
+    if (n > 0) setRaw(formatPtBr(n)); // completa ",00" se não tiver
   }
 
   return (
@@ -91,7 +92,6 @@ export default function MoneyInput({
         spellCheck={false}
         placeholder={placeholder}
         value={displayStr}
-        onFocus={() => setFocused(true)}
         onChange={handleChange}
         onBlur={handleBlur}
         className={`${className} ${prefix ? "pl-10" : ""}`}
